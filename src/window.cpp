@@ -134,6 +134,8 @@ namespace mini {
 	app_window::~app_window () { }
 
 	void app_window::message_loop () {
+		m_last_frame = std::chrono::steady_clock::now();
+
 		while (!glfwWindowShouldClose (m_window.get ())) {
 			glfwPollEvents ();
 

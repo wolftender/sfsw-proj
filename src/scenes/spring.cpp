@@ -5,25 +5,21 @@
 #include "scenes/spring.hpp"
 
 namespace mini {
+	constexpr float FLOAT_MIN = std::numeric_limits<float>::min();
+
 	spring_scene::spring_scene(application_base& app) : scene_base(app),
 		m_time(0.0f),
-		m_friction_coefficient(0.0f),
-		m_spring_coefficient(0.0f),
-		m_x0(0.0f), m_dx0(0.0f), m_ddx0(0.0f),
-		m_x(0.0f), m_dx(0.0f), m_ddx(0.0f),
-		m_w(0.0f), m_dw(0.0f),
-		m_h(0.0f), m_dh(0.0f) {
-
-		m_t_data.resize(MAX_DATA_POINTS);
-		m_f_data.resize(MAX_DATA_POINTS);
-		m_g_data.resize(MAX_DATA_POINTS);
-		m_h_data.resize(MAX_DATA_POINTS);
-
-		m_num_data_points = 0;
+		m_friction_coefficient(0.7f),
+		m_spring_coefficient(10.0f),
+		m_mass(1.0f),
+		m_x0(10.0f), m_dx0(0.0f), m_ddx0(0.0f),
+		m_x(0.0f), m_dx(0.0f), m_ddx(0.0f) {
 
 		// initialize functions
 		m_fw = mk_const(5.0f);
-		m_fh = mk_const(7.0f);
+		m_fh = mk_const(0.0f);
+
+		m_start_simulation();
 	}
 
 	void spring_scene::layout(ImGuiID dockspace_id) {
@@ -35,20 +31,53 @@ namespace mini {
 		ImGui::DockBuilderDockWindow("Simulation Graph", dock_id_bottom);
 	}
 
-	void spring_scene::integrate(float delta_time) {
-		const float t0 = m_time;
-		const float h = delta_time;
+	void spring_scene::m_start_simulation() {
+		m_t_data.clear();
+		m_f_data.clear();
+		m_g_data.clear();
+		m_h_data.clear();
+
+		m_t_data.resize(MAX_DATA_POINTS);
+		m_f_data.resize(MAX_DATA_POINTS);
+		m_g_data.resize(MAX_DATA_POINTS);
+		m_h_data.resize(MAX_DATA_POINTS);
+
+		m_num_data_points = 0;
+
 		const float m = m_mass;
 		const float c = m_spring_coefficient;
 		const float k = m_friction_coefficient;
 
+		float w = m_fw->value(0.0f);
+		float h = m_fh->value(0.0f);
+
+		m_time = 0.0f;
+		m_x = m_x0;
+		m_dx = m_dx0;
+		m_ddx = (c * (w - m_x) - k * m_dx + h) / m;
+	}
+
+	void spring_scene::integrate(float delta_time) {
+		const float t0 = m_time;
+		const float step = delta_time;
+		const float m = m_mass;
+		const float c = m_spring_coefficient;
+		const float k = m_friction_coefficient;
+
+		float w = m_fw->value(t0);
+		float h = m_fh->value(t0);
+
 		const float dw = m_fw->derivative(t0);
 		const float dh = m_fh->derivative(t0);
 
+		float x0 = m_x;
+		float dx0 = m_dx;
+		float ddx0 = m_ddx;
+
 		// euler method
-		const float ddx1 = m_ddx + h * (c * dw - c * m_dx - k * m_dx + dh) / m;
-		const float dx1 = m_dx + h * m_ddx;
-		const float x1 = m_x + h * m_dx;
+		const float ddx1 = ddx0 + step * (c * (dw - dx0) - k * ddx0 + dh) / m;
+		const float dx1 = dx0 + step * ddx0;
+		const float x1 = x0 + step * dx0;
 
 		// advance time step
 		m_time += delta_time;
@@ -58,10 +87,7 @@ namespace mini {
 		m_dx = dx1;
 		m_x = x1;
 
-		float a = m_fh->value(m_time);
-		float b = m_fh->derivative(m_time);
-
-		m_push_data_point(m_time / 100.0f, a, b, 1.0f);
+		m_push_data_point(m_time, c*(w-x0), -k*dx0, h);
 	}
 
 	void spring_scene::render(app_context& context) {
@@ -86,11 +112,14 @@ namespace mini {
 		auto width = max.x - min.x;
 		auto height = max.y - min.y;
 
+		constexpr float min_range_x = 20.0f;
+		constexpr float min_range_y = 5.0f;
+
 		// render plots
 		if (ImPlot::BeginPlot("f(t)", ImVec2(width * 0.325f, height - 15.0f), ImPlotFlags_NoBoxSelect | ImPlotFlags_NoInputs)) {
-			if (m_t_data[m_num_data_points - 1] - m_t_data[0] < 0.2f) {
+			if (m_t_data[m_num_data_points - 1] - m_t_data[0] < min_range_x) {
 				ImPlot::SetupAxis(ImAxis_X1, "t");
-				ImPlot::SetupAxisLimits(ImAxis_X1, m_t_data[0], m_t_data[0] + 0.2f);
+				ImPlot::SetupAxisLimits(ImAxis_X1, m_t_data[0], m_t_data[0] + min_range_x);
 			} else {
 				ImPlot::SetupAxis(ImAxis_X1, "t", ImPlotAxisFlags_AutoFit);
 			}
@@ -103,9 +132,9 @@ namespace mini {
 
 		ImGui::SameLine();
 		if (ImPlot::BeginPlot("g(t)", ImVec2(width * 0.325f, height - 15.0f), ImPlotFlags_NoBoxSelect | ImPlotFlags_NoInputs)) {
-			if (m_t_data[m_num_data_points - 1] - m_t_data[0] < 0.2f) {
+			if (m_t_data[m_num_data_points - 1] - m_t_data[0] < min_range_x) {
 				ImPlot::SetupAxis(ImAxis_X1, "t");
-				ImPlot::SetupAxisLimits(ImAxis_X1, m_t_data[0], m_t_data[0] + 0.2f);
+				ImPlot::SetupAxisLimits(ImAxis_X1, m_t_data[0], m_t_data[0] + min_range_x);
 			} else {
 				ImPlot::SetupAxis(ImAxis_X1, "t", ImPlotAxisFlags_AutoFit);
 			}
@@ -118,9 +147,9 @@ namespace mini {
 
 		ImGui::SameLine();
 		if (ImPlot::BeginPlot("h(t)", ImVec2(width * 0.325f, height - 15.0f), ImPlotFlags_NoBoxSelect | ImPlotFlags_NoInputs)) {
-			if (m_t_data[m_num_data_points - 1] - m_t_data[0] < 0.2f) {
+			if (m_t_data[m_num_data_points - 1] - m_t_data[0] < min_range_x) {
 				ImPlot::SetupAxis(ImAxis_X1, "t");
-				ImPlot::SetupAxisLimits(ImAxis_X1, m_t_data[0], m_t_data[0] + 0.2f);
+				ImPlot::SetupAxisLimits(ImAxis_X1, m_t_data[0], m_t_data[0] + min_range_x);
 			} else {
 				ImPlot::SetupAxis(ImAxis_X1, "t", ImPlotAxisFlags_AutoFit);
 			}
@@ -174,6 +203,7 @@ namespace mini {
 
 			m_num_data_points++;
 		} else {
+
 			for (std::size_t i = 0; i < m_num_data_points - 1; ++i) {
 				m_t_data[i] = m_t_data[i + 1];
 				m_f_data[i] = m_f_data[i + 1];

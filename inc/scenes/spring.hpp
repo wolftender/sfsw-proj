@@ -16,9 +16,6 @@ namespace mini {
 			float m_x0, m_dx0, m_ddx0; // initial values
 			float m_x, m_dx, m_ddx; // position, veloctiy, accel
 
-			float m_w, m_dw; // equilibrium pos
-			float m_h, m_dh; // external forces
-
 			f_func m_fw, m_fh;
 
 			std::vector<float> m_t_data;
@@ -41,6 +38,7 @@ namespace mini {
 			void m_gui_settings();
 			void m_gui_viewport();
 
+			void m_start_simulation();
 			void m_push_data_point(float t, float f, float g, float h);
 	};
 }
