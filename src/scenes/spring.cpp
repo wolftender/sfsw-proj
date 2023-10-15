@@ -7,10 +7,12 @@
 namespace mini {
 	spring_scene::spring_scene(application_base& app) : scene_base(app),
 		m_time(0.0f),
-		m_position(0.0f),
 		m_friction_coefficient(0.0f),
 		m_spring_coefficient(0.0f),
-		m_eq_position(0.0f) {
+		m_x0(0.0f), m_dx0(0.0f), m_ddx0(0.0f),
+		m_x(0.0f), m_dx(0.0f), m_ddx(0.0f),
+		m_w(0.0f), m_dw(0.0f),
+		m_h(0.0f), m_dh(0.0f) {
 
 		m_t_data.resize(MAX_DATA_POINTS);
 		m_f_data.resize(MAX_DATA_POINTS);
@@ -18,6 +20,10 @@ namespace mini {
 		m_h_data.resize(MAX_DATA_POINTS);
 
 		m_num_data_points = 0;
+
+		// initialize functions
+		m_fw = mk_const(5.0f);
+		m_fh = mk_const(7.0f);
 	}
 
 	void spring_scene::layout(ImGuiID dockspace_id) {
@@ -30,8 +36,32 @@ namespace mini {
 	}
 
 	void spring_scene::integrate(float delta_time) {
+		const float t0 = m_time;
+		const float h = delta_time;
+		const float m = m_mass;
+		const float c = m_spring_coefficient;
+		const float k = m_friction_coefficient;
+
+		const float dw = m_fw->derivative(t0);
+		const float dh = m_fh->derivative(t0);
+
+		// euler method
+		const float ddx1 = m_ddx + h * (c * dw - c * m_dx - k * m_dx + dh) / m;
+		const float dx1 = m_dx + h * m_ddx;
+		const float x1 = m_x + h * m_dx;
+
+		// advance time step
 		m_time += delta_time;
-		m_push_data_point(m_time / 100.0f, glm::sin(m_time), glm::cos(m_time), 1.0f / glm::exp(m_time));
+
+		// set new values
+		m_ddx = ddx1;
+		m_dx = dx1;
+		m_x = x1;
+
+		float a = m_fh->value(m_time);
+		float b = m_fh->derivative(m_time);
+
+		m_push_data_point(m_time / 100.0f, a, b, 1.0f);
 	}
 
 	void spring_scene::render(app_context& context) {
@@ -67,7 +97,7 @@ namespace mini {
 
 			ImPlot::SetupAxis(ImAxis_Y1, "##y", ImPlotAxisFlags_AutoFit);
 
-			ImPlot::PlotLine("f(t)", m_t_data.data(), m_f_data.data(), m_num_data_points);
+			ImPlot::PlotLine("f(t)", m_t_data.data(), m_f_data.data(), static_cast<int>(m_num_data_points));
 			ImPlot::EndPlot();
 		}
 
@@ -82,7 +112,7 @@ namespace mini {
 
 			ImPlot::SetupAxis(ImAxis_Y1, "##y", ImPlotAxisFlags_AutoFit);
 
-			ImPlot::PlotLine("g(t)", m_t_data.data(), m_g_data.data(), m_num_data_points);
+			ImPlot::PlotLine("g(t)", m_t_data.data(), m_g_data.data(), static_cast<int>(m_num_data_points));
 			ImPlot::EndPlot();
 		}
 
@@ -97,7 +127,7 @@ namespace mini {
 
 			ImPlot::SetupAxis(ImAxis_Y1, "##y", ImPlotAxisFlags_AutoFit);
 
-			ImPlot::PlotLine("h(t)", m_t_data.data(), m_h_data.data(), m_num_data_points);
+			ImPlot::PlotLine("h(t)", m_t_data.data(), m_h_data.data(), static_cast<int>(m_num_data_points));
 			ImPlot::EndPlot();
 		}
 

@@ -1,17 +1,25 @@
 #pragma once
 #include "scene.hpp"
+#include "function.hpp"
 
 namespace mini {
 	class spring_scene : public scene_base {
 		public:
-			static constexpr float MAX_DATA_POINTS = 2000;
+			static constexpr std::size_t MAX_DATA_POINTS = 2000;
 
 		private:
 			float m_friction_coefficient; // k
 			float m_spring_coefficient; // c
+			float m_mass; // m
 			float m_time; // t
-			float m_position; // x
-			float m_eq_position; // w
+
+			float m_x0, m_dx0, m_ddx0; // initial values
+			float m_x, m_dx, m_ddx; // position, veloctiy, accel
+
+			float m_w, m_dw; // equilibrium pos
+			float m_h, m_dh; // external forces
+
+			f_func m_fw, m_fh;
 
 			std::vector<float> m_t_data;
 			std::vector<float> m_f_data;

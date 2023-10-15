@@ -158,6 +158,7 @@
     <ClInclude Include="inc\billboard.hpp" />
     <ClInclude Include="inc\camera.hpp" />
     <ClInclude Include="inc\context.hpp" />
+    <ClInclude Include="inc\function.hpp" />
     <ClInclude Include="inc\grid.hpp" />
     <ClInclude Include="inc\gui.hpp" />
     <ClInclude Include="inc\scamera.hpp" />
