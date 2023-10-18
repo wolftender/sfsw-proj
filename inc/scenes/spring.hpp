@@ -2,6 +2,7 @@
 #include "scene.hpp"
 #include "function.hpp"
 #include "curve.hpp"
+#include "grid.hpp"
 
 namespace mini {
 	class spring_scene : public scene_base {
@@ -28,6 +29,7 @@ namespace mini {
 			std::size_t m_num_data_points;
 
 			// drawable objects
+			std::shared_ptr<grid_object> m_grid;
 			std::shared_ptr<curve> m_spring_curve;
 
 		public:

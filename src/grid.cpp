@@ -84,8 +84,10 @@ namespace mini {
 		m_shader->set_uniform ("u_grid_spacing", m_spacing);
 		m_shader->set_uniform ("u_focus_position", context.get_camera ().get_target ());
 
+		glDepthMask(GL_FALSE);
 		glDrawElements (GL_TRIANGLES, plane_indices.size (), GL_UNSIGNED_INT, NULL);
 		glBindVertexArray (static_cast<GLuint>(NULL));
 		glBindVertexArray (static_cast<GLuint>(NULL));
+		glDepthMask(GL_TRUE);
 	}
 }

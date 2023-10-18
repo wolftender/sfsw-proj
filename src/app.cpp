@@ -18,6 +18,7 @@ namespace mini {
 		// load some basic shaders
 		m_store.load_shader("basic", "shaders/vs_basic.glsl", "shaders/fs_basic.glsl");
 		m_store.load_shader("grid_xz", "shaders/vs_grid.glsl", "shaders/fs_grid_xz.glsl");
+		m_store.load_shader("grid_xy", "shaders/vs_grid.glsl", "shaders/fs_grid_xy.glsl");
 		m_store.load_shader("billboard", "shaders/vs_billboard.glsl", "shaders/fs_billboard.glsl");
 		m_store.load_shader("billboard_s", "shaders/vs_billboard_s.glsl", "shaders/fs_billboard.glsl");
 		m_store.load_shader("line", "shaders/vs_basic.glsl", "shaders/fs_solidcolor.glsl", "shaders/gs_lines.glsl");

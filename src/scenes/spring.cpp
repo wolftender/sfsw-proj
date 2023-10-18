@@ -15,13 +15,13 @@ namespace mini {
 		m_friction_coefficient(0.7f),
 		m_spring_coefficient(10.0f),
 		m_mass(1.0f),
-		m_x0(10.0f), m_dx0(0.0f), m_ddx0(0.0f),
+		m_x0(3.0f), m_dx0(0.0f), m_ddx0(0.0f),
 		m_x(0.0f), m_dx(0.0f), m_ddx(0.0f),
 		m_last_vp_width(0),
 		m_last_vp_height(0) {
 
 		// initialize functions
-		m_fw = mk_const(5.0f);
+		m_fw = mk_const(0.0f);
 		m_fh = mk_const(0.0f);
 
 		// setup context variables
@@ -33,6 +33,11 @@ namespace mini {
 			m_spring_curve = m_make_helix_curve(line_shader);
 		}
 
+		auto xy_grid_shader = app.get_store().get_shader("grid_xy");
+		if (xy_grid_shader) {
+			m_grid = std::make_shared<grid_object>(xy_grid_shader);
+		}
+
 		m_start_simulation();
 	}
 
@@ -40,15 +45,15 @@ namespace mini {
 		std::vector<glm::vec3> helix_points;
 
 		const float pi = glm::pi<float>();
-		const float radius = 0.25f;
+		const float radius = 0.5f;
 		const float step = pi / 30.0f;
 		const int num_steps = 500;
 
-		const float vert_step = 0.5f / (step * num_steps);
+		const float vert_step = 1.0f / (step * num_steps);
 
 		helix_points.reserve(num_steps);
 
-		for (int i = 0; i < 300; ++i) {
+		for (int i = 0; i < num_steps; ++i) {
 			float t = i * step;
 
 			glm::vec3 point = {
@@ -137,13 +142,25 @@ namespace mini {
 	void spring_scene::render(app_context& context) {
 		// setup scene
 		auto& camera = get_app().get_context().get_camera();
-		camera.set_position({0.0f, 0.0f, -5.0f});
+		camera.set_position({0.0f, 0.0f, -6.0f});
 		camera.set_target({0.0f, 0.0f, 0.0f});
 
+		const float pi = glm::pi<float>();
+
+		if (m_grid) {
+			auto grid_model = glm::mat4x4(1.0f);
+			grid_model = glm::rotate(grid_model, pi * 0.5f, {1.0f, 0.0f, 0.0f});
+
+			context.draw(m_grid, grid_model);
+		}
+
 		if (m_spring_curve) {
-			glm::mat4x4 spring_model = glm::mat4x4(1.0f);
-			spring_model = glm::translate(spring_model, {0.0f, -1.0f, 0.0f});
-			spring_model = glm::scale(spring_model, {1.0f, m_x, 1.0f});
+			float w = m_fw->value(m_time);
+			float l = 3.0f;
+
+			auto spring_model = glm::mat4x4(1.0f);
+			spring_model = glm::translate(spring_model, {0.0f, -w - l, 0.0f});
+			spring_model = glm::scale(spring_model, {1.0f, l + m_x, 1.0f});
 
 			context.draw(m_spring_curve, spring_model);
 		}
