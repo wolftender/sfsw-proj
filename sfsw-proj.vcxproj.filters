@@ -54,6 +54,9 @@
     <ClCompile Include="src\scenes\spring.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\curve.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="inc\app.hpp">
@@ -98,6 +101,9 @@
     <ClInclude Include="inc\function.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="inc\curve.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\fs_basic.glsl" />
@@ -112,6 +118,8 @@
     <None Include="shaders\vs_pass.glsl" />
     <None Include="shaders\vs_position.glsl" />
     <None Include="shaders\vs_sprite.glsl" />
+    <None Include="shaders\fs_grid_xy.glsl" />
+    <None Include="shaders\gs_lines.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Font Include="opensans.ttf" />

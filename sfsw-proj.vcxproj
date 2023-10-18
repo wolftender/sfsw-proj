@@ -143,6 +143,7 @@
     <ClCompile Include="src\billboard.cpp" />
     <ClCompile Include="src\camera.cpp" />
     <ClCompile Include="src\context.cpp" />
+    <ClCompile Include="src\curve.cpp" />
     <ClCompile Include="src\grid.cpp" />
     <ClCompile Include="src\gui.cpp" />
     <ClCompile Include="src\main.cpp" />
@@ -158,6 +159,7 @@
     <ClInclude Include="inc\billboard.hpp" />
     <ClInclude Include="inc\camera.hpp" />
     <ClInclude Include="inc\context.hpp" />
+    <ClInclude Include="inc\curve.hpp" />
     <ClInclude Include="inc\function.hpp" />
     <ClInclude Include="inc\grid.hpp" />
     <ClInclude Include="inc\gui.hpp" />
@@ -172,9 +174,11 @@
   <ItemGroup>
     <None Include="shaders\fs_basic.glsl" />
     <None Include="shaders\fs_billboard.glsl" />
+    <None Include="shaders\fs_grid_xy.glsl" />
     <None Include="shaders\fs_grid_xz.glsl" />
     <None Include="shaders\fs_solidcolor.glsl" />
     <None Include="shaders\fs_white.glsl" />
+    <None Include="shaders\gs_lines.glsl" />
     <None Include="shaders\vs_basic.glsl" />
     <None Include="shaders\vs_billboard.glsl" />
     <None Include="shaders\vs_billboard_s.glsl" />

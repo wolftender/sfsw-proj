@@ -12,13 +12,15 @@ namespace mini {
 
 	spring_scene::spring_scene(application_base& app) : scene_base(app),
 		m_time(0.0f),
-		m_friction_coefficient(0.7f),
-		m_spring_coefficient(10.0f),
-		m_mass(1.0f),
+		m_k0(0.7f),
+		m_c0(10.0f),
+		m_m0(1.0f),
 		m_x0(3.0f), m_dx0(0.0f), m_ddx0(0.0f),
 		m_x(0.0f), m_dx(0.0f), m_ddx(0.0f),
 		m_last_vp_width(0),
 		m_last_vp_height(0),
+		m_distance(6.0f),
+		m_spring_length(3.0f),
 		m_paused(false) {
 
 		// initialize functions
@@ -32,6 +34,7 @@ namespace mini {
 		auto line_shader = app.get_store().get_shader("line");
 		if (line_shader) {
 			m_spring_curve = m_make_helix_curve(line_shader);
+			m_mass_object = m_make_wire_simplex(line_shader);
 		}
 
 		auto xy_grid_shader = app.get_store().get_shader("grid_xy");
@@ -42,17 +45,37 @@ namespace mini {
 		m_start_simulation();
 	}
 
+	std::shared_ptr<curve> spring_scene::m_make_wire_simplex(std::shared_ptr<shader_program> shader) const {
+		std::vector<glm::vec3> points = {
+			{ 0.5f, 0.5f, 0.5f }, 
+			{ 0.5f, 0.5f, -0.5f },
+			{ -0.5f, 0.5f, -0.5f },
+			{ -0.5f, 0.5f, 0.5f },
+			{ 0.5f, 0.5f, 0.5f },
+			{ 0.0f, -0.5f, 0.0f },
+			{ -0.5f, 0.5f, -0.5f },
+			{ 0.5f, 0.5f, -0.5f },
+			{ 0.0f, -0.5f, 0.0f },
+			{ -0.5f, 0.5f, 0.5f }
+		};
+
+		auto object = std::make_shared<curve>(shader, points);
+		object->set_color({ 0.0f, 0.3f, 0.4f, 1.0f });
+
+		return object;
+	}
+
 	std::shared_ptr<curve> spring_scene::m_make_helix_curve(std::shared_ptr<shader_program> line_shader) const {
 		std::vector<glm::vec3> helix_points;
 
-		const float pi = glm::pi<float>();
+		constexpr float pi = glm::pi<float>();
 		const float radius = 0.5f;
 		const float step = pi / 30.0f;
 		const int num_steps = 500;
 
 		const float vert_step = 1.0f / (step * num_steps);
 
-		helix_points.reserve(num_steps);
+		helix_points.reserve(num_steps + 1);
 
 		for (int i = 0; i < num_steps; ++i) {
 			float t = i * step;
@@ -65,6 +88,8 @@ namespace mini {
 
 			helix_points.push_back(point);
 		}
+
+		helix_points.push_back({0.0f, 1.0f, 0.0f});
 
 		auto object = std::make_shared<curve>(line_shader, helix_points);
 		object->set_color({0.0f, 0.0f, 0.0f, 1.0f});
@@ -94,6 +119,10 @@ namespace mini {
 
 		m_num_data_points = 0;
 
+		m_mass = m_m0;
+		m_spring_coefficient = m_c0;
+		m_friction_coefficient = m_k0;
+
 		const float m = m_mass;
 		const float c = m_spring_coefficient;
 		const float k = m_friction_coefficient;
@@ -105,11 +134,18 @@ namespace mini {
 		m_x = m_x0;
 		m_dx = m_dx0;
 		m_ddx = (c * (w - m_x) - k * m_dx + h) / m;
+
+		m_push_data_point(m_time, c * (w - m_x0), -k * m_dx0, h);
 	}
 
 	void spring_scene::integrate(float delta_time) {
 		if (m_paused) {
 			return;
+		}
+
+		// window was dragged probably
+		if (delta_time > 0.1f) {
+			delta_time = 0.1f;
 		}
 
 		const float t0 = m_time;
@@ -146,11 +182,14 @@ namespace mini {
 
 	void spring_scene::render(app_context& context) {
 		// setup scene
+		m_distance = glm::clamp(m_distance, 1.0f, 15.0f);
+		m_spring_length = glm::clamp(m_spring_length, 1.0f, 10.0f);
+
 		auto& camera = get_app().get_context().get_camera();
-		camera.set_position({0.0f, 0.0f, -6.0f});
+		camera.set_position({0.0f, 0.0f, -m_distance});
 		camera.set_target({0.0f, 0.0f, 0.0f});
 
-		const float pi = glm::pi<float>();
+		constexpr float pi = glm::pi<float>();
 
 		if (m_grid) {
 			auto grid_model = glm::mat4x4(1.0f);
@@ -161,7 +200,7 @@ namespace mini {
 
 		if (m_spring_curve) {
 			float w = m_fw->value(m_time);
-			float l = 3.0f;
+			float l = m_spring_length;
 
 			auto spring_model = glm::mat4x4(1.0f);
 			spring_model = glm::translate(spring_model, {0.0f, -w - l, 0.0f});
@@ -169,12 +208,24 @@ namespace mini {
 
 			context.draw(m_spring_curve, spring_model);
 		}
+
+		if (m_mass_object) {
+			auto mass_model = glm::mat4x4(1.0f);
+			mass_model = glm::translate(mass_model, {0.0f, m_x + 0.5f, 0.0f});
+
+			context.draw(m_mass_object, mass_model);
+		}
 	}
 
 	void spring_scene::gui() {
 		m_gui_graph();
 		m_gui_settings();
 		m_gui_viewport();
+	}
+
+	void spring_scene::on_scroll(double offset_x, double offset_y) {
+		m_distance += offset_y * 0.1f;
+		m_distance = glm::clamp(m_distance, 1.0f, 15.0f);
 	}
 
 	void spring_scene::m_gui_graph() {
@@ -254,6 +305,15 @@ namespace mini {
 			
 			gui::prefix_label("dx0 = ");
 			ImGui::InputFloat("##spring_sim_dx0", &m_dx0);
+
+			gui::prefix_label("k = ");
+			ImGui::InputFloat("##spring_sim_k0", &m_k0);
+
+			gui::prefix_label("c = ");
+			ImGui::InputFloat("##spring_sim_c0", &m_c0);
+
+			gui::prefix_label("m = ");
+			ImGui::InputFloat("##spring_sim_m0", &m_m0);
 		}
 
 		if (ImGui::CollapsingHeader("Simulation Settings", ImGuiTreeNodeFlags_DefaultOpen)) {

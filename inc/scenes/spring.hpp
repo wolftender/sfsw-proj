@@ -15,8 +15,13 @@ namespace mini {
 			float m_mass; // m
 			float m_time; // t
 
+			float m_k0, m_c0, m_m0;
+
 			float m_x0, m_dx0, m_ddx0; // initial values
 			float m_x, m_dx, m_ddx; // position, veloctiy, accel
+
+			float m_distance;
+			float m_spring_length;
 
 			f_func m_fw, m_fh;
 			int m_last_vp_width, m_last_vp_height;
@@ -33,6 +38,7 @@ namespace mini {
 			// drawable objects
 			std::shared_ptr<grid_object> m_grid;
 			std::shared_ptr<curve> m_spring_curve;
+			std::shared_ptr<curve> m_mass_object;
 
 		public:
 			spring_scene(application_base& app);
@@ -41,8 +47,10 @@ namespace mini {
 			virtual void integrate(float delta_time) override;
 			virtual void render(app_context& context) override;
 			virtual void gui() override;
+			virtual void on_scroll(double offset_x, double offset_y) override;
 
 		private:
+			std::shared_ptr<curve> m_make_wire_simplex(std::shared_ptr<shader_program> shader) const;
 			std::shared_ptr<curve> m_make_helix_curve(std::shared_ptr<shader_program> shader) const;
 
 			void m_gui_graph();
