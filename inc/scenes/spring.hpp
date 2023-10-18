@@ -1,6 +1,7 @@
 #pragma once
 #include "scene.hpp"
 #include "function.hpp"
+#include "curve.hpp"
 
 namespace mini {
 	class spring_scene : public scene_base {
@@ -17,6 +18,7 @@ namespace mini {
 			float m_x, m_dx, m_ddx; // position, veloctiy, accel
 
 			f_func m_fw, m_fh;
+			int m_last_vp_width, m_last_vp_height;
 
 			std::vector<float> m_t_data;
 			std::vector<float> m_f_data;
@@ -24,6 +26,9 @@ namespace mini {
 			std::vector<float> m_h_data;
 
 			std::size_t m_num_data_points;
+
+			// drawable objects
+			std::shared_ptr<curve> m_spring_curve;
 
 		public:
 			spring_scene(application_base& app);
@@ -34,6 +39,8 @@ namespace mini {
 			virtual void gui() override;
 
 		private:
+			std::shared_ptr<curve> m_make_helix_curve(std::shared_ptr<shader_program> shader) const;
+
 			void m_gui_graph();
 			void m_gui_settings();
 			void m_gui_viewport();

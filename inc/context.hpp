@@ -78,6 +78,8 @@ namespace mini {
 			render_hook_t m_pre_render;
 			render_hook_t m_post_render;
 
+			glm::vec3 m_clear_color;
+
 		public:
 			app_context (const video_mode_t & video_mode);
 			~app_context ();
@@ -87,6 +89,7 @@ namespace mini {
 
 			void set_camera_pos (const glm::vec3 & position);
 			void set_camera_target (const glm::vec3 & target);
+			void set_clear_color(const glm::vec3& color);
 
 			void set_pre_render (render_hook_t hook);
 			void set_post_render (render_hook_t hook);
@@ -95,6 +98,7 @@ namespace mini {
 
 			void set_video_mode (const video_mode_t & video_mode);
 
+			const glm::vec3& get_clear_color() const;
 			const video_mode_t & get_video_mode () const;
 			const GLuint get_front_buffer () const;
 

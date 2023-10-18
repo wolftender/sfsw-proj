@@ -20,6 +20,7 @@ namespace mini {
 		m_store.load_shader("grid_xz", "shaders/vs_grid.glsl", "shaders/fs_grid_xz.glsl");
 		m_store.load_shader("billboard", "shaders/vs_billboard.glsl", "shaders/fs_billboard.glsl");
 		m_store.load_shader("billboard_s", "shaders/vs_billboard_s.glsl", "shaders/fs_billboard.glsl");
+		m_store.load_shader("line", "shaders/vs_basic.glsl", "shaders/fs_solidcolor.glsl", "shaders/gs_lines.glsl");
 
 		m_scene = std::make_unique<spring_scene>(*this);
 	}
@@ -30,6 +31,10 @@ namespace mini {
 
 	app_context& application::get_context() {
 		return m_context;
+	}
+
+	resource_store& application::get_store() {
+		return m_store;
 	}
 
 	void application::t_integrate(float delta_time) {

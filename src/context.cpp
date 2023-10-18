@@ -57,6 +57,14 @@ namespace mini {
 		m_destroy_frame_buffer ();
 	}
 
+	void app_context::set_clear_color(const glm::vec3& color) {
+		m_clear_color = color;
+	}
+
+	const glm::vec3& app_context::get_clear_color() const {
+		return m_clear_color;
+	}
+
 	void app_context::set_camera_pos (const glm::vec3 & position) {
 		m_camera->set_position (position);
 	}
@@ -191,7 +199,7 @@ namespace mini {
 		glViewport (0, 0, m_video_mode.get_buffer_width (), m_video_mode.get_buffer_height ());
 
 		// clear screen
-		glClearColor (0.75f, 0.75f, 0.75f, 1.0f);
+		glClearColor (m_clear_color.x, m_clear_color.y, m_clear_color.z, 1.0f);
 		glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// render the scene

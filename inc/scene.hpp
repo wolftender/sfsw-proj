@@ -3,6 +3,7 @@
 
 #include "window.hpp"
 #include "context.hpp"
+#include "store.hpp"
 
 namespace mini {
 	class scene_base;
@@ -13,6 +14,7 @@ namespace mini {
 
 			virtual scene_base& get_scene() = 0;
 			virtual app_context& get_context() = 0;
+			virtual resource_store& get_store() = 0;
 	};
 
 	class scene_base {

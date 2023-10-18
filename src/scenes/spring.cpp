@@ -1,6 +1,9 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/constants.hpp>
+
 #include "gui.hpp"
 #include "scenes/spring.hpp"
 
@@ -13,13 +16,54 @@ namespace mini {
 		m_spring_coefficient(10.0f),
 		m_mass(1.0f),
 		m_x0(10.0f), m_dx0(0.0f), m_ddx0(0.0f),
-		m_x(0.0f), m_dx(0.0f), m_ddx(0.0f) {
+		m_x(0.0f), m_dx(0.0f), m_ddx(0.0f),
+		m_last_vp_width(0),
+		m_last_vp_height(0) {
 
 		// initialize functions
 		m_fw = mk_const(5.0f);
 		m_fh = mk_const(0.0f);
 
+		// setup context variables
+		app.get_context().set_clear_color({0.95f, 0.95f, 0.95f});
+
+		// initialize renderable objects
+		auto line_shader = app.get_store().get_shader("line");
+		if (line_shader) {
+			m_spring_curve = m_make_helix_curve(line_shader);
+		}
+
 		m_start_simulation();
+	}
+
+	std::shared_ptr<curve> spring_scene::m_make_helix_curve(std::shared_ptr<shader_program> line_shader) const {
+		std::vector<glm::vec3> helix_points;
+
+		const float pi = glm::pi<float>();
+		const float radius = 0.25f;
+		const float step = pi / 30.0f;
+		const int num_steps = 500;
+
+		const float vert_step = 0.5f / (step * num_steps);
+
+		helix_points.reserve(num_steps);
+
+		for (int i = 0; i < 300; ++i) {
+			float t = i * step;
+
+			glm::vec3 point = {
+				radius * glm::cos(t),
+				t * vert_step,
+				radius * glm::sin(t)
+			};
+
+			helix_points.push_back(point);
+		}
+
+		auto object = std::make_shared<curve>(line_shader, helix_points);
+		object->set_color({0.0f, 0.0f, 0.0f, 1.0f});
+
+		return object;
 	}
 
 	void spring_scene::layout(ImGuiID dockspace_id) {
@@ -91,7 +135,18 @@ namespace mini {
 	}
 
 	void spring_scene::render(app_context& context) {
-		
+		// setup scene
+		auto& camera = get_app().get_context().get_camera();
+		camera.set_position({0.0f, 0.0f, -5.0f});
+		camera.set_target({0.0f, 0.0f, 0.0f});
+
+		if (m_spring_curve) {
+			glm::mat4x4 spring_model = glm::mat4x4(1.0f);
+			spring_model = glm::translate(spring_model, {0.0f, -1.0f, 0.0f});
+			spring_model = glm::scale(spring_model, {1.0f, m_x, 1.0f});
+
+			context.draw(m_spring_curve, spring_model);
+		}
 	}
 
 	void spring_scene::gui() {
@@ -180,16 +235,33 @@ namespace mini {
 	}
 
 	void spring_scene::m_gui_viewport() {
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(270, 450));
+		auto& context = get_app().get_context();
+
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2 (320, 240));
 		ImGui::Begin("Spring", NULL);
-		ImGui::SetWindowPos(ImVec2(30, 30), ImGuiCond_Once);
-		ImGui::SetWindowSize(ImVec2(270, 450), ImGuiCond_Once);
+		ImGui::SetWindowPos(ImVec2 (30, 30), ImGuiCond_Once);
+		ImGui::SetWindowSize(ImVec2 (640, 480), ImGuiCond_Once);
 
-		// render controls
-		if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen)) {
-			ImGui::Button("dupa");
+		auto min = ImGui::GetWindowContentRegionMin();
+		auto max = ImGui::GetWindowContentRegionMax();
+		auto window_pos = ImGui::GetWindowPos();
+
+		int width = static_cast<int>(max.x - min.x);
+		int height = static_cast<int>(max.y - min.y);
+
+		if ((width != m_last_vp_width || height != m_last_vp_height) && width > 8 && height > 8) {
+			video_mode_t mode(width, height);
+
+			context.set_video_mode(mode);
+
+			m_last_vp_width = width;
+			m_last_vp_height = height;
+		} else {
+			ImGui::ImageButton(
+			reinterpret_cast<ImTextureID>(context.get_front_buffer()), 
+			ImVec2(width, height), ImVec2(0, 0), ImVec2(1, 1), 0);
 		}
-
+		
 		ImGui::End();
 		ImGui::PopStyleVar(1);
 	}

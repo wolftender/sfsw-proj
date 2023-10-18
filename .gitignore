@@ -366,3 +366,4 @@ FodyWeavers.xsd
 libs/
 obj/
 bin/
+.vscode/

@@ -19,6 +19,7 @@ namespace mini {
 
 			virtual scene_base& get_scene() override;
 			virtual app_context& get_context() override;
+			virtual resource_store& get_store() override;
 
 		protected:
 			virtual void t_integrate(float delta_time) override;
