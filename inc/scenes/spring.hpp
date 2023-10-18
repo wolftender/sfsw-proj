@@ -21,6 +21,8 @@ namespace mini {
 			f_func m_fw, m_fh;
 			int m_last_vp_width, m_last_vp_height;
 
+			bool m_paused;
+
 			std::vector<float> m_t_data;
 			std::vector<float> m_f_data;
 			std::vector<float> m_g_data;

@@ -18,7 +18,8 @@ namespace mini {
 		m_x0(3.0f), m_dx0(0.0f), m_ddx0(0.0f),
 		m_x(0.0f), m_dx(0.0f), m_ddx(0.0f),
 		m_last_vp_width(0),
-		m_last_vp_height(0) {
+		m_last_vp_height(0),
+		m_paused(false) {
 
 		// initialize functions
 		m_fw = mk_const(0.0f);
@@ -107,6 +108,10 @@ namespace mini {
 	}
 
 	void spring_scene::integrate(float delta_time) {
+		if (m_paused) {
+			return;
+		}
+
 		const float t0 = m_time;
 		const float step = delta_time;
 		const float m = m_mass;
@@ -243,8 +248,23 @@ namespace mini {
 		ImGui::SetWindowSize(ImVec2(270, 450), ImGuiCond_Once);
 
 		// render controls
-		if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen)) {
-			ImGui::Button("dupa");
+		if (ImGui::CollapsingHeader("Starting Values", ImGuiTreeNodeFlags_DefaultOpen)) {
+			gui::prefix_label("x0 = ");
+			ImGui::InputFloat("##spring_sim_x0", &m_x0);
+			
+			gui::prefix_label("dx0 = ");
+			ImGui::InputFloat("##spring_sim_dx0", &m_dx0);
+		}
+
+		if (ImGui::CollapsingHeader("Simulation Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
+			gui::prefix_label ("Pause Simulation: ", 250.0f);
+			ImGui::Checkbox ("##spring_sim_paused", &m_paused);
+
+			if (ImGui::Button("Reset Simulation")) {
+				m_start_simulation();
+			}
+
+			ImGui::NewLine ();
 		}
 
 		ImGui::End();
