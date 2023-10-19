@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include <imgui.h>
 #include <imgui_internal.h>
 
@@ -5,6 +7,8 @@
 #include <glm/gtc/constants.hpp>
 
 #include "gui.hpp"
+#include "mathparse.hpp"
+
 #include "scenes/spring.hpp"
 
 namespace mini {
@@ -26,6 +30,15 @@ namespace mini {
 		// initialize functions
 		m_fw = mk_const(0.0f);
 		m_fh = mk_const(0.0f);
+
+		try {
+			math_lexer lexer("sin(t)+cos(t)");
+			math_parser parser(lexer.tokenize());
+
+			m_fh = parser.parse();
+		} catch (const std::exception& e) {
+			std::cerr << "parser error: " << e.what() << std::endl;
+		}
 
 		// setup context variables
 		app.get_context().set_clear_color({0.95f, 0.95f, 0.95f});

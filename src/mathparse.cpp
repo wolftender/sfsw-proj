@@ -36,19 +36,21 @@ namespace mini {
 
     std::vector<token_t> math_lexer::tokenize() {
         std::vector<token_t> tokens;
-        auto token = m_next();
 
-        for (; token.type != token_type_t::unexpected && token.type != token_type_t::end;
-            token = m_next()) {
+        for (auto ret = m_next(); ret.has_value(); ret = m_next()) {
+            auto token = ret.value();
 
             if (token.type == token_type_t::subtraction) {
                 tokens.push_back(token_t(token_type_t::number, ZERO));
             }
 
             tokens.push_back(token);
+
+            if (token.type == token_type_t::unexpected) {
+                break;
+            }
         }
 
-        tokens.push_back(token);
         return tokens;
     }
 
@@ -120,7 +122,7 @@ namespace mini {
         return token_t(token_type_t::number, std::string_view(&(*start), m_curr - start));
     }
 
-    token_t math_lexer::m_next() {
+    std::optional<token_t> math_lexer::m_next() {
         while (m_ch_in_set(m_peek(), EMPTY_CHARACTERS)) {
             (void)m_get();
         }
@@ -128,7 +130,7 @@ namespace mini {
         const char ch = m_peek();
         switch (ch) {
         case '\0':
-            return m_atom(token_type_t::end);
+            return {};
 
         case TOKEN_ADD:
             return m_atom(token_type_t::addition);
@@ -239,9 +241,6 @@ namespace mini {
                 operator_stack.push(token);
                 break;
 
-            case token_type_t::end:
-                break;
-
             default:
                 throw std::runtime_error(std::format("unexpected token {}", token.content));
             }
@@ -267,5 +266,18 @@ namespace mini {
         }
 
         return output_queue;
+    }
+
+    f_func math_parser::parse() const {
+        auto stack = to_rpn() | std::views::reverse;
+        auto top = stack.begin();
+
+        auto fn = m_parse(stack, top);
+
+        if (top != stack.end()) {
+            throw std::runtime_error(std::format("unexpected token {}", top->content));
+        }
+
+        return fn;
     }
 }

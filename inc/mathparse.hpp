@@ -1,6 +1,9 @@
 #pragma once
 #include <vector>
 #include <string_view>
+#include <format>
+#include <ranges>
+#include <optional>
 
 #include "function.hpp"
 
@@ -17,8 +20,7 @@ namespace mini {
         comma,
         left_bracket,
         right_bracket,
-        dot,
-        end
+        dot
     };
 
     struct token_t {
@@ -54,7 +56,7 @@ namespace mini {
             token_t m_atom(token_type_t type);
             token_t m_identifier();
             token_t m_number();
-            token_t m_next();
+            std::optional<token_t> m_next();
     };
 
     class math_parser final {
@@ -72,5 +74,69 @@ namespace mini {
 
         std::vector<token_t> to_rpn() const;
         f_func parse() const;
+
+    private:
+        template<std::ranges::forward_range Range>
+        requires std::same_as<std::ranges::range_value_t<Range>, token_t>
+        f_func m_parse(const Range& stack, std::ranges::iterator_t<Range> & top) const {
+            // pop token from stack
+            token_t token = *top;
+            std::advance(top, 1);
+
+            switch (token.type) {
+                case token_type_t::number:
+                    return mk_const(std::stof(std::string(token.content)));
+
+                case token_type_t::identifier: {
+                    if (token.content == "t") {
+                        return mk_lin(1.0f);
+                    } else if (token.content == "sin") {
+                        auto arg1 = m_parse(stack, top);
+                        return mk_comp(mk_sin(), std::move(arg1));
+                    } else if (token.content == "cos") {
+                        auto arg1 = m_parse(stack, top);
+                        return mk_comp(mk_cos(), std::move(arg1));
+                    } else if (token.content == "exp") {
+                        auto arg1 = m_parse(stack, top);
+                        return mk_comp(mk_exp(), std::move(arg1));
+                    }
+                }
+
+                break;
+
+                case token_type_t::addition: {
+                    auto arg1 = m_parse(stack, top);
+                    auto arg2 = m_parse(stack, top);
+
+                    return mk_sum(std::move(arg1), std::move(arg2));
+                }
+
+                case token_type_t::subtraction: {
+                    auto arg1 = m_parse(stack, top);
+                    auto arg2 = m_parse(stack, top);
+
+                    return mk_sub(std::move(arg1), std::move(arg2));
+                }
+
+                case token_type_t::multiplication: {
+                    auto arg1 = m_parse(stack, top);
+                    auto arg2 = m_parse(stack, top);
+
+                    return mk_mul(std::move(arg1), std::move(arg2));
+                }
+
+                case token_type_t::division: {
+                    auto arg1 = m_parse(stack, top);
+                    auto arg2 = m_parse(stack, top);
+
+                    return mk_frac(std::move(arg1), std::move(arg2));
+                }
+
+                default:
+                    break;
+            }
+
+            throw std::runtime_error(std::format("invalid expression, token: {}", token.content));
+        }
     };
 }
