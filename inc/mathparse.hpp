@@ -105,29 +105,29 @@ namespace mini {
                 break;
 
                 case token_type_t::addition: {
-                    auto arg1 = m_parse(stack, top);
                     auto arg2 = m_parse(stack, top);
+                    auto arg1 = m_parse(stack, top);
 
                     return mk_sum(std::move(arg1), std::move(arg2));
                 }
 
                 case token_type_t::subtraction: {
-                    auto arg1 = m_parse(stack, top);
                     auto arg2 = m_parse(stack, top);
+                    auto arg1 = m_parse(stack, top);
 
                     return mk_sub(std::move(arg1), std::move(arg2));
                 }
 
                 case token_type_t::multiplication: {
-                    auto arg1 = m_parse(stack, top);
                     auto arg2 = m_parse(stack, top);
+                    auto arg1 = m_parse(stack, top);
 
                     return mk_mul(std::move(arg1), std::move(arg2));
                 }
 
                 case token_type_t::division: {
-                    auto arg1 = m_parse(stack, top);
                     auto arg2 = m_parse(stack, top);
+                    auto arg1 = m_parse(stack, top);
 
                     return mk_frac(std::move(arg1), std::move(arg2));
                 }
