@@ -112,8 +112,12 @@ namespace mini {
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10.0f, 10.0f));
 
 		if (ImGui::BeginMenuBar()) {
-			if (ImGui::BeginMenu("File")) {
-				if (ImGui::MenuItem("New", "Ctrl + N", nullptr, true)) {
+			if (m_scene) {
+				m_scene->menu();
+			}
+			
+			if (ImGui::BeginMenu("Simulation")) {
+				if (ImGui::MenuItem("Spring", "Ctrl + Shift + F1", nullptr, true)) {
 					std::cout << "hello world" << std::endl;
 				}
 

@@ -63,6 +63,7 @@ namespace mini {
 			virtual void integrate(float delta_time) override;
 			virtual void render(app_context& context) override;
 			virtual void gui() override;
+			virtual void menu() override;
 			virtual void on_scroll(double offset_x, double offset_y) override;
 
 		private:
@@ -73,6 +74,9 @@ namespace mini {
 			void m_gui_trajectory();
 			void m_gui_settings();
 			void m_gui_viewport();
+
+			// export to file
+			void m_export_data();
 
 			void m_start_simulation();
 			void m_push_data_point(float t, float f, float g, float h, float x, float v);

@@ -1,4 +1,7 @@
 #include <iostream>
+#include <fstream>
+#include <ios>
+#include <chrono>
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -112,6 +115,47 @@ namespace mini {
 		ImGui::DockBuilderDockWindow("Simulation Settings", dock_id_right);
 		ImGui::DockBuilderDockWindow("Trajectory", dock_id_right);
 		ImGui::DockBuilderDockWindow("Simulation Graph", dock_id_bottom);
+	}
+
+	inline std::tm localtime_xp(std::time_t timer) {
+		std::tm bt{};
+#if defined(__unix__)
+		localtime_r(&timer, &bt);
+#elif defined(_MSC_VER)
+		localtime_s(&bt, &timer);
+#else
+		static std::mutex mtx;
+		std::lock_guard<std::mutex> lock(mtx);
+		bt = *std::localtime(&timer);
+#endif
+		return bt;
+	}
+
+	void spring_scene::m_export_data() {
+		const auto now = std::time(nullptr);
+		const std::tm tm = localtime_xp(now);
+
+		const std::string file_name = std::format("spring-{}-{}-{}-{}-{}.txt", 
+			tm.tm_year + 1900,
+			tm.tm_mon + 1,
+			tm.tm_mday,
+			tm.tm_hour,
+			tm.tm_min,
+			tm.tm_sec);
+
+		std::ofstream stream(file_name);
+
+		if (stream) {
+			for (auto i = 0; i < m_num_data_points; ++i) {
+				stream 
+				<< m_t_data[i] << " "
+				<< m_f_data[i] << " "
+				<< m_g_data[i] << " "
+				<< m_h_data[i] << " "
+				<< m_x_data[i] << " "
+				<< m_v_data[i] << std::endl;
+			}
+		}
 	}
 
 	void spring_scene::m_start_simulation() {
@@ -275,6 +319,16 @@ namespace mini {
 		m_gui_trajectory();
 	}
 
+	void spring_scene::menu() {
+		if (ImGui::BeginMenu("File")) {
+			if (ImGui::MenuItem("Export Data", "Ctrl + Shift + E", nullptr, true)) {
+				m_export_data();
+			}
+
+			ImGui::EndMenu();
+		}
+	}
+
 	void spring_scene::on_scroll(double offset_x, double offset_y) {
 		m_distance -= offset_y * 0.2f;
 		m_distance = glm::clamp(m_distance, 1.0f, 15.0f);
@@ -361,8 +415,8 @@ namespace mini {
 
 		// render plots
 		if (ImPlot::BeginPlot("x(v)", ImVec2(width, height), ImPlotFlags_NoBoxSelect)) {
-			ImPlot::SetupAxis(ImAxis_X1, "x");
-			ImPlot::SetupAxis(ImAxis_Y1, "v");
+			ImPlot::SetupAxis(ImAxis_X1, "position", ImPlotAxisFlags_AutoFit);
+			ImPlot::SetupAxis(ImAxis_Y1, "velocity", ImPlotAxisFlags_AutoFit);
 
 			ImPlot::PlotLine("x(v)", m_x_data.data(), m_v_data.data(), static_cast<int>(m_num_data_points));
 			ImPlot::EndPlot();

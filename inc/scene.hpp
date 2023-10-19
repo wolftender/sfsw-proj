@@ -32,6 +32,7 @@ namespace mini {
 			virtual void integrate(float delta_time) = 0;
 			virtual void render(app_context & context) = 0;
 			virtual void gui() = 0;
+			virtual void menu() = 0;
 
 			virtual void on_character(unsigned int code) {}
 			virtual void on_cursor_pos(double posx, double posy) {}
