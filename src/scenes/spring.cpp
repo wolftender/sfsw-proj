@@ -231,8 +231,9 @@ namespace mini {
 			context.draw(m_grid, grid_model);
 		}
 
+		float w = m_fw->value(m_time);
+
 		if (m_spring_curve) {
-			float w = m_fw->value(m_time);
 			float l = m_spring_length;
 
 			auto spring_model = glm::mat4x4(1.0f);
@@ -244,7 +245,7 @@ namespace mini {
 
 		if (m_mass_object) {
 			auto mass_model = glm::mat4x4(1.0f);
-			mass_model = glm::translate(mass_model, {0.0f, m_x + 0.5f, 0.0f});
+			mass_model = glm::translate(mass_model, {0.0f, -w + m_x + 0.5f, 0.0f});
 
 			context.draw(m_mass_object, mass_model);
 		}
@@ -257,7 +258,7 @@ namespace mini {
 	}
 
 	void spring_scene::on_scroll(double offset_x, double offset_y) {
-		m_distance += offset_y * 0.1f;
+		m_distance -= offset_y * 0.2f;
 		m_distance = glm::clamp(m_distance, 1.0f, 15.0f);
 	}
 

@@ -48,6 +48,7 @@ namespace mini {
 			std::shared_ptr<grid_object> m_grid;
 			std::shared_ptr<curve> m_spring_curve;
 			std::shared_ptr<curve> m_mass_object;
+			std::shared_ptr<curve> m_roof_object;
 
 		public:
 			spring_scene(application_base& app);
