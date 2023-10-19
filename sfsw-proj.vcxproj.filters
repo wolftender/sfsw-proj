@@ -130,4 +130,7 @@
   <ItemGroup>
     <Font Include="opensans.ttf" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="functions.txt" />
+  </ItemGroup>
 </Project>

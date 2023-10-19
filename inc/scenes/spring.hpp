@@ -14,8 +14,10 @@ namespace mini {
 			float m_spring_coefficient; // c
 			float m_mass; // m
 			float m_time; // t
+			float m_step; // h
+			float m_step_timer;
 
-			float m_k0, m_c0, m_m0;
+			float m_k0, m_c0, m_m0, m_h0;
 
 			float m_x0, m_dx0, m_ddx0; // initial values
 			float m_x, m_dx, m_ddx; // position, veloctiy, accel
@@ -42,6 +44,10 @@ namespace mini {
 			std::vector<float> m_g_data;
 			std::vector<float> m_h_data;
 
+			// trajectory
+			std::vector<float> m_x_data;
+			std::vector<float> m_v_data;
+
 			std::size_t m_num_data_points;
 
 			// drawable objects
@@ -64,10 +70,11 @@ namespace mini {
 			std::shared_ptr<curve> m_make_helix_curve(std::shared_ptr<shader_program> shader) const;
 
 			void m_gui_graph();
+			void m_gui_trajectory();
 			void m_gui_settings();
 			void m_gui_viewport();
 
 			void m_start_simulation();
-			void m_push_data_point(float t, float f, float g, float h);
+			void m_push_data_point(float t, float f, float g, float h, float x, float v);
 	};
 }

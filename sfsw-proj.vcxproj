@@ -196,6 +196,9 @@
   <ItemGroup>
     <Font Include="opensans.ttf" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="functions.txt" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

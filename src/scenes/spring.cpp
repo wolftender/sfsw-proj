@@ -25,6 +25,7 @@ namespace mini {
 		m_last_vp_height(0),
 		m_distance(6.0f),
 		m_spring_length(3.0f),
+		m_h0(1.0f / 60.0f),
 		m_paused(false),
 		m_w_expression("0"),
 		m_h_expression("sin(t)+cos(t)") {
@@ -109,6 +110,7 @@ namespace mini {
 
 		ImGui::DockBuilderDockWindow("Spring", dockspace_id);
 		ImGui::DockBuilderDockWindow("Simulation Settings", dock_id_right);
+		ImGui::DockBuilderDockWindow("Trajectory", dock_id_right);
 		ImGui::DockBuilderDockWindow("Simulation Graph", dock_id_bottom);
 	}
 
@@ -144,17 +146,22 @@ namespace mini {
 		m_f_data.clear();
 		m_g_data.clear();
 		m_h_data.clear();
+		m_x_data.clear();
+		m_v_data.clear();
 
 		m_t_data.resize(MAX_DATA_POINTS);
 		m_f_data.resize(MAX_DATA_POINTS);
 		m_g_data.resize(MAX_DATA_POINTS);
 		m_h_data.resize(MAX_DATA_POINTS);
+		m_x_data.resize(MAX_DATA_POINTS);
+		m_v_data.resize(MAX_DATA_POINTS);
 
 		m_num_data_points = 0;
 
 		m_mass = m_m0;
 		m_spring_coefficient = m_c0;
 		m_friction_coefficient = m_k0;
+		m_step = m_h0;
 
 		const float m = m_mass;
 		const float c = m_spring_coefficient;
@@ -168,7 +175,7 @@ namespace mini {
 		m_dx = m_dx0;
 		m_ddx = (c * (w - m_x) - k * m_dx + h) / m;
 
-		m_push_data_point(m_time, c * (w - m_x0), -k * m_dx0, h);
+		m_push_data_point(m_time, c * (w - m_x0), -k * m_dx0, h, m_x, m_dx);
 	}
 
 	void spring_scene::integrate(float delta_time) {
@@ -181,36 +188,46 @@ namespace mini {
 			delta_time = 0.1f;
 		}
 
-		const float t0 = m_time;
-		const float step = delta_time;
-		const float m = m_mass;
-		const float c = m_spring_coefficient;
-		const float k = m_friction_coefficient;
+		float t0 = m_time;
+		m_step_timer += delta_time;
+		
+		while (m_step_timer > m_step) {
+			const float step = m_step;
+			const float m = m_mass;
+			const float c = m_spring_coefficient;
+			const float k = m_friction_coefficient;
 
-		float w = m_fw->value(t0);
-		float h = m_fh->value(t0);
+			float w = m_fw->value(t0);
+			float h = m_fh->value(t0);
 
-		const float dw = m_fw->derivative(t0);
-		const float dh = m_fh->derivative(t0);
+			const float dw = m_fw->derivative(t0);
+			const float dh = m_fh->derivative(t0);
 
-		float x0 = m_x;
-		float dx0 = m_dx;
-		float ddx0 = m_ddx;
+			float x0 = m_x;
+			float dx0 = m_dx;
+			float ddx0 = m_ddx;
 
-		// euler method
-		const float ddx1 = ddx0 + step * (c * (dw - dx0) - k * ddx0 + dh) / m;
-		const float dx1 = dx0 + step * ddx0;
-		const float x1 = x0 + step * dx0;
+			// euler method
+			const float ddx1 = ddx0 + step * (c * (dw - dx0) - k * ddx0 + dh) / m;
+			const float dx1 = dx0 + step * ddx0;
+			const float x1 = x0 + step * dx0;
+
+			// set new values
+			m_ddx = ddx1;
+			m_dx = dx1;
+			m_x = x1;
+
+			t0 = t0 + m_step;
+			m_step_timer -= m_step;
+
+			// only push one point per frame (otherwise the buffer is too small)
+			if (m_step_timer < m_step) {
+				m_push_data_point(m_time, c * (w - x0), -k * dx0, h, m_x, m_dx);
+			}
+		}
 
 		// advance time step
 		m_time += delta_time;
-
-		// set new values
-		m_ddx = ddx1;
-		m_dx = dx1;
-		m_x = x1;
-
-		m_push_data_point(m_time, c*(w-x0), -k*dx0, h);
 	}
 
 	void spring_scene::render(app_context& context) {
@@ -255,6 +272,7 @@ namespace mini {
 		m_gui_graph();
 		m_gui_settings();
 		m_gui_viewport();
+		m_gui_trajectory();
 	}
 
 	void spring_scene::on_scroll(double offset_x, double offset_y) {
@@ -326,6 +344,34 @@ namespace mini {
 		ImGui::PopStyleVar(1);
 	}
 
+	void spring_scene::m_gui_trajectory() {
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(270, 450));
+		ImGui::Begin("Trajectory", NULL);
+		ImGui::SetWindowPos(ImVec2(30, 30), ImGuiCond_Once);
+		ImGui::SetWindowSize(ImVec2(270, 450), ImGuiCond_Once);
+
+		auto min = ImGui::GetWindowContentRegionMin();
+		auto max = ImGui::GetWindowContentRegionMax();
+
+		auto width = max.x - min.x;
+		auto height = max.y - min.y;
+
+		constexpr float min_range_x = 20.0f;
+		constexpr float min_range_y = 20.0f;
+
+		// render plots
+		if (ImPlot::BeginPlot("x(v)", ImVec2(width, height), ImPlotFlags_NoBoxSelect)) {
+			ImPlot::SetupAxis(ImAxis_X1, "x");
+			ImPlot::SetupAxis(ImAxis_Y1, "v");
+
+			ImPlot::PlotLine("x(v)", m_x_data.data(), m_v_data.data(), static_cast<int>(m_num_data_points));
+			ImPlot::EndPlot();
+		}
+
+		ImGui::End();
+		ImGui::PopStyleVar(1);
+	}
+
 	void spring_scene::m_gui_settings() {
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(270, 450));
 		ImGui::Begin("Simulation Settings", NULL);
@@ -348,6 +394,10 @@ namespace mini {
 
 			gui::prefix_label("m = ");
 			ImGui::InputFloat("##spring_sim_m0", &m_m0);
+
+			gui::prefix_label("h = ");
+			ImGui::InputFloat("##spring_sim_step", &m_h0);
+			gui::clamp(m_h0, 0.001f, 0.1f);
 
 			gui::prefix_label("w(t) = ");
 			ImGui::InputText("##spring_w_func", &m_w_expression);
@@ -415,12 +465,14 @@ namespace mini {
 		ImGui::PopStyleVar(1);
 	}
 
-	void spring_scene::m_push_data_point(float t, float f, float g, float h) {
+	void spring_scene::m_push_data_point(float t, float f, float g, float h, float x, float v) {
 		if (m_num_data_points < MAX_DATA_POINTS) {
 			m_t_data[m_num_data_points] = t;
 			m_f_data[m_num_data_points] = f;
 			m_g_data[m_num_data_points] = g;
 			m_h_data[m_num_data_points] = h;
+			m_x_data[m_num_data_points] = x;
+			m_v_data[m_num_data_points] = v;
 
 			m_num_data_points++;
 		} else {
@@ -430,12 +482,16 @@ namespace mini {
 				m_f_data[i] = m_f_data[i + 1];
 				m_g_data[i] = m_g_data[i + 1];
 				m_h_data[i] = m_h_data[i + 1];
+				m_x_data[i] = m_x_data[i + 1];
+				m_v_data[i] = m_v_data[i + 1];
 			}
 
 			m_t_data[m_num_data_points - 1] = t;
 			m_f_data[m_num_data_points - 1] = f;
 			m_g_data[m_num_data_points - 1] = g;
 			m_h_data[m_num_data_points - 1] = h;
+			m_x_data[m_num_data_points - 1] = x;
+			m_v_data[m_num_data_points - 1] = v;
 		}
 	}
 }
