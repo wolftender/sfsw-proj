@@ -11,12 +11,12 @@ namespace mini {
     enum class token_type_t {
         unexpected,
         number,
-        identifier,
         addition,
         subtraction,
         multiplication,
         division,
         exponentiation,
+        identifier,
         comma,
         left_bracket,
         right_bracket,
