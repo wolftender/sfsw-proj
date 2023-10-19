@@ -28,6 +28,15 @@ namespace mini {
 
 			bool m_paused;
 
+			std::string m_w_expression;
+			std::string m_h_expression;
+
+			bool m_is_w_error;
+			bool m_is_h_error;
+
+			std::string m_w_error;
+			std::string m_h_error;
+
 			std::vector<float> m_t_data;
 			std::vector<float> m_f_data;
 			std::vector<float> m_g_data;

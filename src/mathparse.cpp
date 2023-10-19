@@ -40,9 +40,9 @@ namespace mini {
         for (auto ret = m_next(); ret.has_value(); ret = m_next()) {
             auto token = ret.value();
 
-            if (token.type == token_type_t::subtraction) {
-                tokens.push_back(token_t(token_type_t::number, ZERO));
-            }
+            //if (token.type == token_type_t::subtraction) {
+            //    tokens.push_back(token_t(token_type_t::number, ZERO));
+            //}
 
             tokens.push_back(token);
 

@@ -25,20 +25,13 @@ namespace mini {
 		m_last_vp_height(0),
 		m_distance(6.0f),
 		m_spring_length(3.0f),
-		m_paused(false) {
+		m_paused(false),
+		m_w_expression("0"),
+		m_h_expression("sin(t)+cos(t)") {
 
 		// initialize functions
 		m_fw = mk_const(0.0f);
 		m_fh = mk_const(0.0f);
-
-		try {
-			math_lexer lexer("sin(t)+cos(t)");
-			math_parser parser(lexer.tokenize());
-
-			m_fh = parser.parse();
-		} catch (const std::exception& e) {
-			std::cerr << "parser error: " << e.what() << std::endl;
-		}
 
 		// setup context variables
 		app.get_context().set_clear_color({0.95f, 0.95f, 0.95f});
@@ -120,6 +113,33 @@ namespace mini {
 	}
 
 	void spring_scene::m_start_simulation() {
+		// try parse expressions and return if fails
+		try {
+			math_lexer lexer(m_w_expression);
+			math_parser parser(lexer.tokenize());
+
+			m_fw = parser.parse();
+			m_is_w_error = false;
+		} catch (const std::exception& e) {
+			m_w_error = e.what();
+			m_is_w_error = true;
+
+			return;
+		}
+
+		try {
+			math_lexer lexer(m_h_expression);
+			math_parser parser(lexer.tokenize());
+
+			m_fh = parser.parse();
+			m_is_h_error = false;
+		} catch (const std::exception& e) {
+			m_h_error = e.what();
+			m_is_h_error = true;
+
+			return;
+		}
+
 		m_t_data.clear();
 		m_f_data.clear();
 		m_g_data.clear();
@@ -260,7 +280,7 @@ namespace mini {
 		if (ImPlot::BeginPlot("f(t)", ImVec2(width * 0.325f, height - 15.0f), ImPlotFlags_NoBoxSelect | ImPlotFlags_NoInputs)) {
 			if (m_t_data[m_num_data_points - 1] - m_t_data[0] < min_range_x) {
 				ImPlot::SetupAxis(ImAxis_X1, "t");
-				ImPlot::SetupAxisLimits(ImAxis_X1, m_t_data[0], m_t_data[0] + min_range_x);
+				ImPlot::SetupAxisLimits(ImAxis_X1, m_t_data[0], m_t_data[0] + min_range_x, ImPlotCond_Always);
 			} else {
 				ImPlot::SetupAxis(ImAxis_X1, "t", ImPlotAxisFlags_AutoFit);
 			}
@@ -275,7 +295,7 @@ namespace mini {
 		if (ImPlot::BeginPlot("g(t)", ImVec2(width * 0.325f, height - 15.0f), ImPlotFlags_NoBoxSelect | ImPlotFlags_NoInputs)) {
 			if (m_t_data[m_num_data_points - 1] - m_t_data[0] < min_range_x) {
 				ImPlot::SetupAxis(ImAxis_X1, "t");
-				ImPlot::SetupAxisLimits(ImAxis_X1, m_t_data[0], m_t_data[0] + min_range_x);
+				ImPlot::SetupAxisLimits(ImAxis_X1, m_t_data[0], m_t_data[0] + min_range_x, ImPlotCond_Always);
 			} else {
 				ImPlot::SetupAxis(ImAxis_X1, "t", ImPlotAxisFlags_AutoFit);
 			}
@@ -290,7 +310,7 @@ namespace mini {
 		if (ImPlot::BeginPlot("h(t)", ImVec2(width * 0.325f, height - 15.0f), ImPlotFlags_NoBoxSelect | ImPlotFlags_NoInputs)) {
 			if (m_t_data[m_num_data_points - 1] - m_t_data[0] < min_range_x) {
 				ImPlot::SetupAxis(ImAxis_X1, "t");
-				ImPlot::SetupAxisLimits(ImAxis_X1, m_t_data[0], m_t_data[0] + min_range_x);
+				ImPlot::SetupAxisLimits(ImAxis_X1, m_t_data[0], m_t_data[0] + min_range_x, ImPlotCond_Always);
 			} else {
 				ImPlot::SetupAxis(ImAxis_X1, "t", ImPlotAxisFlags_AutoFit);
 			}
@@ -327,6 +347,24 @@ namespace mini {
 
 			gui::prefix_label("m = ");
 			ImGui::InputFloat("##spring_sim_m0", &m_m0);
+
+			gui::prefix_label("w(t) = ");
+			ImGui::InputText("##spring_w_func", &m_w_expression);
+
+			if (m_is_w_error) {
+				ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 255));
+				ImGui::Text(m_w_error.c_str());
+				ImGui::PopStyleColor();
+			}
+
+			gui::prefix_label("h(t) = ");
+			ImGui::InputText("##spring_h_func", &m_h_expression);
+
+			if (m_is_h_error) {
+				ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 255));
+				ImGui::Text(m_h_error.c_str());
+				ImGui::PopStyleColor();
+			}
 		}
 
 		if (ImGui::CollapsingHeader("Simulation Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
