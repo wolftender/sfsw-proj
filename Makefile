@@ -22,7 +22,7 @@ IMPLOT_OBJ := $(patsubst $(IMPLOT_SRC_DIR)/%.cpp, $(IMPLOT_OBJ_DIR)/%.o, $(IMPLO
 NFD_INC_DIR := libs/nativefiledialog/src/include
 NFD_LIB_DIR := libs/nativefiledialog/build/lib/Release/x64
 
-CPPFLAGS := -Iinc -I$(NFD_INC_DIR) -Ilibs/lodepng `pkg-config --cflags glfw3` -Ilibs/glad/include -Ilibs/imgui -Ilibs/implot --std=c++17
+CPPFLAGS := -Iinc -I$(NFD_INC_DIR) -Ilibs/lodepng `pkg-config --cflags glfw3` -Ilibs/glad/include -Ilibs/imgui -Ilibs/implot --std=c++20
 CFLAGS := -Wall -g
 LDFLAGS :=
 LDLIBS := `pkg-config --libs glfw3` `pkg-config --libs gtk+-3.0` -L$(NFD_LIB_DIR) -lnfd -ldl -lpthread

@@ -252,9 +252,9 @@ namespace mini {
 			float ddx0 = m_ddx;
 
 			// euler method
-			const float ddx1 = ddx0 + step * (c * (dw - dx0) - k * ddx0 + dh) / m;
-			const float dx1 = dx0 + step * ddx0;
 			const float x1 = x0 + step * dx0;
+			const float dx1 = dx0 + step * ddx0;
+			const float ddx1 = (c * (w - x1) - k * dx1 + h) / m;
 
 			// set new values
 			m_ddx = ddx1;
@@ -451,7 +451,7 @@ namespace mini {
 
 			gui::prefix_label("h = ");
 			ImGui::InputFloat("##spring_sim_step", &m_h0);
-			gui::clamp(m_h0, 0.001f, 0.1f);
+			gui::clamp(m_h0, 0.0001f, 0.1f);
 
 			gui::prefix_label("w(t) = ");
 			ImGui::InputText("##spring_w_func", &m_w_expression);
