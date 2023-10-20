@@ -99,6 +99,9 @@ namespace mini {
                     } else if (token.content == "exp") {
                         auto arg1 = m_parse(stack, top);
                         return mk_comp(mk_exp(), std::move(arg1));
+                    } else if (token.content == "sgn") {
+                        auto arg1 = m_parse(stack, top);
+                        return mk_comp(mk_sgn(), std::move(arg1));
                     }
                 }
 

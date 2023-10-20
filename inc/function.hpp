@@ -1,10 +1,23 @@
 #pragma once
 #include <memory>
+#include <limits>
+#include <optional>
+
 #include <glm/glm.hpp>
 
 namespace mini {
+	constexpr float NOT_DIFFERENTIABLE = std::numeric_limits<float>::quiet_NaN();
+
 	class f_base {
+		private:
+			bool m_differentiable;
+
 		public:
+			bool is_differentiable() const {
+				return m_differentiable;
+			}
+
+			f_base(bool differentiable) : m_differentiable(differentiable) { }
 			virtual ~f_base() { }
 
 			virtual float derivative(float t) = 0;
@@ -18,7 +31,9 @@ namespace mini {
 			f_func m_f1, m_f2;
 
 		public:
-			f_sum(f_func && f1, f_func && f2) : m_f1(std::move(f1)), m_f2(std::move(f2)) { }
+			f_sum(f_func && f1, f_func && f2) : 
+				f_base(f1->is_differentiable() && f2->is_differentiable()),
+				m_f1(std::move(f1)), m_f2(std::move(f2)) { }
 
 			virtual float derivative(float t) override {
 				return m_f1->derivative(t) + m_f2->derivative(t);
@@ -34,7 +49,9 @@ namespace mini {
 			f_func m_f1, m_f2;
 
 		public:
-			f_sub(f_func&& f1, f_func&& f2) : m_f1(std::move(f1)), m_f2(std::move(f2)) {}
+			f_sub(f_func&& f1, f_func&& f2) : 
+				f_base(f1->is_differentiable() && f2->is_differentiable()),
+				m_f1(std::move(f1)), m_f2(std::move(f2)) { }
 
 			virtual float derivative(float t) override {
 				return m_f1->derivative(t) - m_f2->derivative(t);
@@ -50,7 +67,9 @@ namespace mini {
 			f_func m_f1, m_f2;
 
 		public:
-			f_mul(f_func&& f1, f_func&& f2) : m_f1(std::move(f1)), m_f2(std::move(f2)) {}
+			f_mul(f_func&& f1, f_func&& f2) : 
+				f_base(f1->is_differentiable() && f2->is_differentiable()),
+				m_f1(std::move(f1)), m_f2(std::move(f2)) {}
 
 			virtual float derivative(float t) override {
 				return (m_f1->derivative(t) * m_f2->value(t)) + (m_f2->derivative(t) * m_f1->value(t));
@@ -66,7 +85,9 @@ namespace mini {
 			f_func m_f1, m_f2;
 
 		public:
-			f_frac(f_func&& f1, f_func&& f2) : m_f1(std::move(f1)), m_f2(std::move(f2)) {}
+			f_frac(f_func&& f1, f_func&& f2) : 
+				f_base(f1->is_differentiable() && f2->is_differentiable()),
+				m_f1(std::move(f1)), m_f2(std::move(f2)) {}
 
 			virtual float derivative(float t) override {
 				return ((m_f1->derivative(t) * m_f2->value(t)) - (m_f2->derivative(t) * m_f1->value(t))) / (m_f2->value(t) * m_f2->value(t));
@@ -82,7 +103,9 @@ namespace mini {
 			f_func m_f1, m_f2;
 
 		public:
-			f_comp(f_func&& f1, f_func&& f2) : m_f1(std::move(f1)), m_f2(std::move(f2)) {}
+			f_comp(f_func&& f1, f_func&& f2) : 
+				f_base(f1->is_differentiable() && f2->is_differentiable()),
+				m_f1(std::move(f1)), m_f2(std::move(f2)) {}
 
 			virtual float derivative(float t) override {
 				return m_f1->derivative(m_f2->value(t)) * m_f2->derivative(t);
@@ -98,7 +121,7 @@ namespace mini {
 			float m_value;
 
 		public:
-			f_const(float value) : m_value(value) {}
+			f_const(float value) : f_base(true), m_value(value) {}
 
 			virtual float derivative(float t) override {
 				return 0.0f;
@@ -114,7 +137,7 @@ namespace mini {
 			float m_slope;
 
 		public:
-			f_lin(float slope) : m_slope(slope) { }
+			f_lin(float slope) : f_base(true), m_slope(slope) { }
 
 			virtual float derivative(float t) override {
 				return m_slope;
@@ -130,7 +153,7 @@ namespace mini {
 			float m_pow;
 
 		public:
-			f_pow(float pow) : m_pow(pow) {}
+			f_pow(float pow) : f_base(true), m_pow(pow) {}
 
 			virtual float derivative(float t) override {
 				return glm::pow(t, m_pow - 1.0f);
@@ -143,7 +166,7 @@ namespace mini {
 
 	class f_exp : public f_base {
 		public:
-			f_exp() = default;
+			f_exp() : f_base(true) {}
 
 			virtual float derivative(float t) override {
 				return glm::exp(t);
@@ -156,7 +179,7 @@ namespace mini {
 
 	class f_sin : public f_base {
 		public:
-			f_sin() = default;
+			f_sin() : f_base(true) {}
 
 			virtual float derivative(float t) override {
 				return glm::cos(t);
@@ -169,7 +192,7 @@ namespace mini {
 
 	class f_cos : public f_base {
 		public:
-			f_cos() = default;
+			f_cos() : f_base(true) {}
 
 			virtual float derivative(float t) override {
 				return -glm::sin(t);
@@ -179,6 +202,28 @@ namespace mini {
 				return glm::cos(t);
 			}
 	};
+
+	class f_sign : public f_base {
+		public:
+			f_sign() : f_base(false) {}
+
+			virtual float derivative(float t) override {
+				return NOT_DIFFERENTIABLE;
+			}
+
+			virtual float value(float t) override {
+				return glm::sign(t);
+			}
+	};
+
+	inline std::optional<float> diff(const f_func& f, const float t) {
+		auto df = f->derivative(t);
+		if (std::isnan(df)) {
+			return {};
+		}
+
+		return df;
+	}
 
 	inline f_func mk_sum(f_func && f1, f_func && f2) {
 		return std::make_unique<f_sum>(std::move(f1), std::move(f2));
@@ -195,7 +240,7 @@ namespace mini {
 	inline f_func mk_frac(f_func&& f1, f_func&& f2) {
 		return std::make_unique<f_frac>(std::move(f1), std::move(f2));
 	}
-
+ 
 	inline f_func mk_comp(f_func&& f1, f_func&& f2) {
 		return std::make_unique<f_comp>(std::move(f1), std::move(f2));
 	}
@@ -222,5 +267,9 @@ namespace mini {
 
 	inline f_func mk_cos() {
 		return std::make_unique<f_cos>();
+	}
+
+	inline f_func mk_sgn() {
+		return std::make_unique<f_sign>();
 	}
 }

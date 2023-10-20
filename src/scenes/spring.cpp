@@ -244,8 +244,8 @@ namespace mini {
 			float w = m_fw->value(t0);
 			float h = m_fh->value(t0);
 
-			const float dw = m_fw->derivative(t0);
-			const float dh = m_fh->derivative(t0);
+			//const float dw = m_fw->derivative(t0);
+			//const float dh = m_fh->derivative(t0);
 
 			float x0 = m_x;
 			float dx0 = m_dx;
