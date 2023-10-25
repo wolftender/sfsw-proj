@@ -270,6 +270,11 @@ namespace mini {
 
     f_func math_parser::parse() const {
         auto stack = to_rpn() | std::views::reverse;
+
+        if (stack.empty()) {
+            return mk_const(0.0f);
+        }
+
         auto top = stack.begin();
 
         auto fn = m_parse(stack, top);

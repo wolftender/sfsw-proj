@@ -115,6 +115,7 @@ namespace mini {
 		ImGui::DockBuilderDockWindow("Simulation Settings", dock_id_right);
 		ImGui::DockBuilderDockWindow("Trajectory", dock_id_right);
 		ImGui::DockBuilderDockWindow("Simulation Graph", dock_id_bottom);
+		ImGui::DockBuilderDockWindow("Velocity Graph", dock_id_bottom);
 	}
 
 	inline std::tm localtime_xp(std::time_t timer) {
@@ -153,7 +154,8 @@ namespace mini {
 				<< m_g_data[i] << " "
 				<< m_h_data[i] << " "
 				<< m_x_data[i] << " "
-				<< m_v_data[i] << std::endl;
+				<< m_v_data[i] << " "
+				<< m_a_data[i] << std::endl;
 			}
 		}
 	}
@@ -192,6 +194,7 @@ namespace mini {
 		m_h_data.clear();
 		m_x_data.clear();
 		m_v_data.clear();
+		m_a_data.clear();
 
 		m_t_data.resize(MAX_DATA_POINTS);
 		m_f_data.resize(MAX_DATA_POINTS);
@@ -199,6 +202,7 @@ namespace mini {
 		m_h_data.resize(MAX_DATA_POINTS);
 		m_x_data.resize(MAX_DATA_POINTS);
 		m_v_data.resize(MAX_DATA_POINTS);
+		m_a_data.resize(MAX_DATA_POINTS);
 
 		m_num_data_points = 0;
 
@@ -219,7 +223,7 @@ namespace mini {
 		m_dx = m_dx0;
 		m_ddx = (c * (w - m_x) - k * m_dx + h) / m;
 
-		m_push_data_point(m_time, c * (w - m_x0), -k * m_dx0, h, m_x, m_dx);
+		m_push_data_point(m_time, c * (w - m_x0), -k * m_dx0, h, m_x, m_dx, m_ddx);
 	}
 
 	void spring_scene::integrate(float delta_time) {
@@ -266,7 +270,7 @@ namespace mini {
 
 			// only push one point per frame (otherwise the buffer is too small)
 			if (m_step_timer < m_step) {
-				m_push_data_point(m_time, c * (w - x0), -k * dx0, h, m_x, m_dx);
+				m_push_data_point(m_time, c * (w - x0), -k * dx0, h, m_x, m_dx, m_ddx);
 			}
 		}
 
@@ -299,14 +303,14 @@ namespace mini {
 
 			auto spring_model = glm::mat4x4(1.0f);
 			spring_model = glm::translate(spring_model, {0.0f, -w - l, 0.0f});
-			spring_model = glm::scale(spring_model, {1.0f, l + m_x, 1.0f});
+			spring_model = glm::scale(spring_model, {1.0f, l + m_x - w, 1.0f});
 
 			context.draw(m_spring_curve, spring_model);
 		}
 
 		if (m_mass_object) {
 			auto mass_model = glm::mat4x4(1.0f);
-			mass_model = glm::translate(mass_model, {0.0f, -w + m_x + 0.5f, 0.0f});
+			mass_model = glm::translate(mass_model, {0.0f, -w + m_x - w + 0.5f, 0.0f});
 
 			context.draw(m_mass_object, mass_model);
 		}
@@ -314,6 +318,7 @@ namespace mini {
 
 	void spring_scene::gui() {
 		m_gui_graph();
+		m_gui_graph_velocity();
 		m_gui_settings();
 		m_gui_viewport();
 		m_gui_trajectory();
@@ -391,6 +396,70 @@ namespace mini {
 			ImPlot::SetupAxis(ImAxis_Y1, "##y", ImPlotAxisFlags_AutoFit);
 
 			ImPlot::PlotLine("h(t)", m_t_data.data(), m_h_data.data(), static_cast<int>(m_num_data_points));
+			ImPlot::EndPlot();
+		}
+
+		ImGui::End();
+		ImGui::PopStyleVar(1);
+	}
+
+	void spring_scene::m_gui_graph_velocity() {
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(270, 450));
+		ImGui::Begin("Velocity Graph", NULL);
+		ImGui::SetWindowPos(ImVec2(30, 30), ImGuiCond_Once);
+		ImGui::SetWindowSize(ImVec2(270, 450), ImGuiCond_Once);
+
+		auto min = ImGui::GetWindowContentRegionMin();
+		auto max = ImGui::GetWindowContentRegionMax();
+
+		auto width = max.x - min.x;
+		auto height = max.y - min.y;
+
+		constexpr float min_range_x = 20.0f;
+		constexpr float min_range_y = 5.0f;
+
+		// render plots
+		if (ImPlot::BeginPlot("x(t)", ImVec2(width * 0.325f, height - 15.0f), ImPlotFlags_NoBoxSelect | ImPlotFlags_NoInputs)) {
+			if (m_t_data[m_num_data_points - 1] - m_t_data[0] < min_range_x) {
+				ImPlot::SetupAxis(ImAxis_X1, "t");
+				ImPlot::SetupAxisLimits(ImAxis_X1, m_t_data[0], m_t_data[0] + min_range_x, ImPlotCond_Always);
+			} else {
+				ImPlot::SetupAxis(ImAxis_X1, "t", ImPlotAxisFlags_AutoFit);
+			}
+
+			ImPlot::SetupAxis(ImAxis_Y1, "##y", ImPlotAxisFlags_AutoFit);
+
+			ImPlot::PlotLine("x(t)", m_t_data.data(), m_x_data.data(), static_cast<int>(m_num_data_points));
+			ImPlot::EndPlot();
+		}
+
+		ImGui::SameLine();
+		if (ImPlot::BeginPlot("dx(t)", ImVec2(width * 0.325f, height - 15.0f), ImPlotFlags_NoBoxSelect | ImPlotFlags_NoInputs)) {
+			if (m_t_data[m_num_data_points - 1] - m_t_data[0] < min_range_x) {
+				ImPlot::SetupAxis(ImAxis_X1, "t");
+				ImPlot::SetupAxisLimits(ImAxis_X1, m_t_data[0], m_t_data[0] + min_range_x, ImPlotCond_Always);
+			} else {
+				ImPlot::SetupAxis(ImAxis_X1, "t", ImPlotAxisFlags_AutoFit);
+			}
+
+			ImPlot::SetupAxis(ImAxis_Y1, "##y", ImPlotAxisFlags_AutoFit);
+
+			ImPlot::PlotLine("dx(t)", m_t_data.data(), m_v_data.data(), static_cast<int>(m_num_data_points));
+			ImPlot::EndPlot();
+		}
+
+		ImGui::SameLine();
+		if (ImPlot::BeginPlot("ddx(t)", ImVec2(width * 0.325f, height - 15.0f), ImPlotFlags_NoBoxSelect | ImPlotFlags_NoInputs)) {
+			if (m_t_data[m_num_data_points - 1] - m_t_data[0] < min_range_x) {
+				ImPlot::SetupAxis(ImAxis_X1, "t");
+				ImPlot::SetupAxisLimits(ImAxis_X1, m_t_data[0], m_t_data[0] + min_range_x, ImPlotCond_Always);
+			} else {
+				ImPlot::SetupAxis(ImAxis_X1, "t", ImPlotAxisFlags_AutoFit);
+			}
+
+			ImPlot::SetupAxis(ImAxis_Y1, "##y", ImPlotAxisFlags_AutoFit);
+
+			ImPlot::PlotLine("ddx(t)", m_t_data.data(), m_a_data.data(), static_cast<int>(m_num_data_points));
 			ImPlot::EndPlot();
 		}
 
@@ -519,7 +588,7 @@ namespace mini {
 		ImGui::PopStyleVar(1);
 	}
 
-	void spring_scene::m_push_data_point(float t, float f, float g, float h, float x, float v) {
+	void spring_scene::m_push_data_point(float t, float f, float g, float h, float x, float v, float a) {
 		if (m_num_data_points < MAX_DATA_POINTS) {
 			m_t_data[m_num_data_points] = t;
 			m_f_data[m_num_data_points] = f;
@@ -527,6 +596,7 @@ namespace mini {
 			m_h_data[m_num_data_points] = h;
 			m_x_data[m_num_data_points] = x;
 			m_v_data[m_num_data_points] = v;
+			m_a_data[m_num_data_points] = a;
 
 			m_num_data_points++;
 		} else {
@@ -538,6 +608,7 @@ namespace mini {
 				m_h_data[i] = m_h_data[i + 1];
 				m_x_data[i] = m_x_data[i + 1];
 				m_v_data[i] = m_v_data[i + 1];
+				m_a_data[i] = m_a_data[i + 1];
 			}
 
 			m_t_data[m_num_data_points - 1] = t;
@@ -546,6 +617,7 @@ namespace mini {
 			m_h_data[m_num_data_points - 1] = h;
 			m_x_data[m_num_data_points - 1] = x;
 			m_v_data[m_num_data_points - 1] = v;
+			m_a_data[m_num_data_points - 1] = a;
 		}
 	}
 }

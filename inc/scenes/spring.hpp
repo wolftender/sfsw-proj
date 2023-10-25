@@ -47,6 +47,7 @@ namespace mini {
 			// trajectory
 			std::vector<float> m_x_data;
 			std::vector<float> m_v_data;
+			std::vector<float> m_a_data;
 
 			std::size_t m_num_data_points;
 
@@ -71,6 +72,7 @@ namespace mini {
 			std::shared_ptr<curve> m_make_helix_curve(std::shared_ptr<shader_program> shader) const;
 
 			void m_gui_graph();
+			void m_gui_graph_velocity();
 			void m_gui_trajectory();
 			void m_gui_settings();
 			void m_gui_viewport();
@@ -79,6 +81,6 @@ namespace mini {
 			void m_export_data();
 
 			void m_start_simulation();
-			void m_push_data_point(float t, float f, float g, float h, float x, float v);
+			void m_push_data_point(float t, float f, float g, float h, float x, float v, float a);
 	};
 }
