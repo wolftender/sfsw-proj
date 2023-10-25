@@ -303,14 +303,14 @@ namespace mini {
 
 			auto spring_model = glm::mat4x4(1.0f);
 			spring_model = glm::translate(spring_model, {0.0f, -w - l, 0.0f});
-			spring_model = glm::scale(spring_model, {1.0f, l + m_x - w, 1.0f});
+			spring_model = glm::scale(spring_model, {1.0f, l - m_x + w, 1.0f});
 
 			context.draw(m_spring_curve, spring_model);
 		}
 
 		if (m_mass_object) {
 			auto mass_model = glm::mat4x4(1.0f);
-			mass_model = glm::translate(mass_model, {0.0f, -w + m_x - w + 0.5f, 0.0f});
+			mass_model = glm::translate(mass_model, {0.0f, -m_x + 0.5f, 0.0f});
 
 			context.draw(m_mass_object, mass_model);
 		}
