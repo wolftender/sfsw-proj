@@ -4,11 +4,41 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 namespace mini {
+	constexpr float SQRT3 = 1.73205080757f;
+	constexpr float SQRT3INV = 1.0f / SQRT3;
+
+	// simulation code starts here
+	static inline glm::mat3x3 cube_inertia_tensor(const float diagonal, const float density) {
+		// edge width
+		const float a = SQRT3INV * diagonal;
+		const float mass = density * a * a * a;
+		
+		return mass * glm::mat3x3{
+			2.0f*a*a/3.0f, -a*a/4.0f, -a*a/4.0f,
+			-a*a/4.0f, 2.0f*a*a/3.0f, -a*a/4.0f,
+			-a*a/4.0f, -a*a/4.0f, 2.0f*a*a/3.0f
+		};
+	}
+
+	top_scene::simulation_state_t::simulation_state_t(const simulation_parameters_t& parameters) :
+		rotation(1.0f, 0.0f, 0.0f, 0.0f),
+		parameters(parameters) {
+
+		// compute inertia tensor based on parameters
+		inertia_tensor = cube_inertia_tensor(parameters.diagonal_length, parameters.cube_density);
+	}
+
+	void top_scene::simulation_state_t::integrate(float delta_time) {
+	}
+
 	top_scene::top_scene(application_base& app) : scene_base(app),
+		m_start_params(),
+		m_state(m_start_params),
 		m_viewport(app, "Spinning Top"),
 		m_display_cube(true),
 		m_display_plane(true),
 		m_display_diagonal(true),
+		m_display_grid(true),
 		m_display_path(true),
 		m_max_data_points(MAX_DATA_POINTS),
 		m_num_data_points(0UL) {
@@ -23,6 +53,10 @@ namespace mini {
 
 		if (grid_shader) {
 			m_grid = std::make_shared<grid_object>(grid_shader);
+		}
+
+		if (cube_shader) {
+			m_cube = std::make_shared<cube_object>(cube_shader);
 		}
 	}
 
@@ -41,9 +75,18 @@ namespace mini {
 	}
 
 	void top_scene::render(app_context& context) {
-		if (m_grid) {
+		if (m_grid && m_display_grid) {
 			auto grid_model = glm::mat4x4(1.0f);
 			context.draw(m_grid, grid_model);
+		}
+
+		if (m_cube && m_display_cube) {
+			auto cube_model = glm::mat4x4(1.0f);
+
+			const float edge_len = SQRT3INV * m_state.parameters.diagonal_length;
+			cube_model = glm::scale(cube_model, {edge_len, edge_len, edge_len});
+
+			context.draw(m_cube, cube_model);
 		}
 	}
 
@@ -78,9 +121,44 @@ namespace mini {
 		ImGui::SetWindowPos(ImVec2(30, 30), ImGuiCond_Once);
 		ImGui::SetWindowSize(ImVec2(270, 450), ImGuiCond_Once);
 
+		m_viewport.configure();
+
 		// render controls
-		if (ImGui::CollapsingHeader("i wonder whats for", ImGuiTreeNodeFlags_DefaultOpen)) {
-			ImGui::Button("dinner");
+		if (ImGui::CollapsingHeader("Simulation Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
+			gui::prefix_label("Diagonal Len.: ", 250.0f);
+			ImGui::InputFloat("##top_diagonal", &m_start_params.diagonal_length);
+
+			gui::prefix_label("Deviation: ", 250.0f);
+			ImGui::InputFloat("##top_deviation", &m_start_params.cube_deviation);
+
+			gui::prefix_label("Density: ", 250.0f);
+			ImGui::InputFloat("##top_density", &m_start_params.cube_density);
+
+			gui::prefix_label("Int. Step: ", 250.0f);
+			ImGui::InputFloat("##top_step", &m_start_params.int_step);
+
+			gui::prefix_label("Ang. Velocity: ", 250.0f);
+			ImGui::InputFloat("##top_angvel", &m_start_params.angular_velocity);
+
+			if (ImGui::Button("Apply Settings")) {
+				m_state = simulation_state_t(m_start_params);
+			}
+
+			ImGui::NewLine();
+		}
+
+		if (ImGui::CollapsingHeader("Display Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
+			gui::prefix_label("Show Cube: ", 250.0f);
+			ImGui::Checkbox("##top_show_cube", &m_display_cube);
+
+			gui::prefix_label("Show Grid: ", 250.0f);
+			ImGui::Checkbox("##top_show_grid", &m_display_grid);
+
+			gui::prefix_label("Show Path: ", 250.0f);
+			ImGui::Checkbox("##top_show_path", &m_display_path);
+
+			gui::prefix_label("Show Diagonal: ", 250.0f);
+			ImGui::Checkbox("##top_show_diag", &m_display_diagonal);
 		}
 
 		ImGui::End();

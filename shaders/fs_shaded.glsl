@@ -15,5 +15,5 @@ uniform sampler2D u_texture;
 out vec4 frag_color;
 
 void main() {
-    frag_color = vec4(fs_in.color.xyz, 1.0);
+    frag_color = vec4(fs_in.color.xyz, 0.75);
 }

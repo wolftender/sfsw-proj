@@ -79,6 +79,7 @@ namespace mini {
 		}
 
 		// camera uptading
+		gui::clamp(m_cam_pitch, -1.56f, 1.56f);
 		gui::clamp(m_distance, 1.0f, 30.0f);
 
 		glm::vec4 cam_pos = { 0.0f, 0.0f, -m_distance, 1.0f };
@@ -140,5 +141,21 @@ namespace mini {
 
 		ImGui::End();
 		ImGui::PopStyleVar(1);
+	}
+
+	void viewport_window::configure() {
+		if (ImGui::CollapsingHeader("Viewport Settings")) {
+			gui::prefix_label("Cam. Pitch: ", 250.0f);
+			ImGui::InputFloat("##pitch", &m_cam_pitch);
+
+			gui::prefix_label("Cam. Yaw: ", 250.0f);
+			ImGui::InputFloat("##yaw", &m_cam_yaw);
+
+			gui::prefix_label("Cam. Dist: ", 250.0f);
+			ImGui::InputFloat("##distance", &m_distance);
+
+			gui::vector_editor("Cam. Target", m_camera_target);
+			ImGui::NewLine();
+		}
 	}
 }

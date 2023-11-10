@@ -170,6 +170,7 @@ namespace mini {
 	}
 
 	void cube_object::render(app_context& context, const glm::mat4x4& world_matrix) const {
+		glEnable(GL_CULL_FACE);
 		glBindVertexArray(m_vao);
 
 		m_shader->bind();
@@ -184,5 +185,6 @@ namespace mini {
 
 		glDrawElements(GL_TRIANGLES, cube_indices.size(), GL_UNSIGNED_INT, NULL);
 		glBindVertexArray(0);
+		glDisable(GL_CULL_FACE);
 	}
 }

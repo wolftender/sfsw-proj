@@ -46,5 +46,6 @@ namespace mini {
 
 			void update(float delta_time);
 			void display();
+			void configure();
 	};
 }
