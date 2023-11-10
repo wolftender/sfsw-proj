@@ -29,7 +29,7 @@ namespace mini {
 					cube_density = 1.0f;
 					cube_deviation = 0.0f;
 					angular_velocity = 2.0f;
-					int_step = 0.001f;
+					int_step = 0.01f;
 				}
 			};
 
@@ -37,9 +37,12 @@ namespace mini {
 				simulation_parameters_t parameters;
 
 				glm::mat3x3 inertia_tensor;
+				glm::mat3x3 inertia_tensor_inv;
 
-				glm::vec3 angular_velocity;
-				glm::quat rotation;
+				glm::vec3 W;
+				glm::quat Q;
+
+				float time, step_timer;
 
 				simulation_state_t(const simulation_parameters_t & parameters);
 				void integrate(float delta_time);
