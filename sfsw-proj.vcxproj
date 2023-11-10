@@ -147,6 +147,7 @@
     <ClCompile Include="src\billboard.cpp" />
     <ClCompile Include="src\camera.cpp" />
     <ClCompile Include="src\context.cpp" />
+    <ClCompile Include="src\cube.cpp" />
     <ClCompile Include="src\curve.cpp" />
     <ClCompile Include="src\grid.cpp" />
     <ClCompile Include="src\gui.cpp" />
@@ -154,6 +155,7 @@
     <ClCompile Include="src\mathparse.cpp" />
     <ClCompile Include="src\scamera.cpp" />
     <ClCompile Include="src\scenes\spring.cpp" />
+    <ClCompile Include="src\scenes\top.cpp" />
     <ClCompile Include="src\shader.cpp" />
     <ClCompile Include="src\store.cpp" />
     <ClCompile Include="src\texture.cpp" />
@@ -164,6 +166,7 @@
     <ClInclude Include="inc\billboard.hpp" />
     <ClInclude Include="inc\camera.hpp" />
     <ClInclude Include="inc\context.hpp" />
+    <ClInclude Include="inc\cube.hpp" />
     <ClInclude Include="inc\curve.hpp" />
     <ClInclude Include="inc\function.hpp" />
     <ClInclude Include="inc\grid.hpp" />
@@ -172,6 +175,7 @@
     <ClInclude Include="inc\scamera.hpp" />
     <ClInclude Include="inc\scene.hpp" />
     <ClInclude Include="inc\scenes\spring.hpp" />
+    <ClInclude Include="inc\scenes\top.hpp" />
     <ClInclude Include="inc\shader.hpp" />
     <ClInclude Include="inc\store.hpp" />
     <ClInclude Include="inc\texture.hpp" />
@@ -182,6 +186,7 @@
     <None Include="shaders\fs_billboard.glsl" />
     <None Include="shaders\fs_grid_xy.glsl" />
     <None Include="shaders\fs_grid_xz.glsl" />
+    <None Include="shaders\fs_shaded.glsl" />
     <None Include="shaders\fs_solidcolor.glsl" />
     <None Include="shaders\fs_white.glsl" />
     <None Include="shaders\gs_lines.glsl" />
@@ -191,6 +196,7 @@
     <None Include="shaders\vs_grid.glsl" />
     <None Include="shaders\vs_pass.glsl" />
     <None Include="shaders\vs_position.glsl" />
+    <None Include="shaders\vs_shaded.glsl" />
     <None Include="shaders\vs_sprite.glsl" />
   </ItemGroup>
   <ItemGroup>

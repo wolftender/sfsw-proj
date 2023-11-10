@@ -60,6 +60,12 @@
     <ClCompile Include="src\mathparse.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\scenes\top.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\cube.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="inc\app.hpp">
@@ -110,6 +116,12 @@
     <ClInclude Include="inc\mathparse.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="inc\scenes\top.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\cube.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\fs_basic.glsl" />
@@ -126,6 +138,8 @@
     <None Include="shaders\vs_sprite.glsl" />
     <None Include="shaders\fs_grid_xy.glsl" />
     <None Include="shaders\gs_lines.glsl" />
+    <None Include="shaders\vs_shaded.glsl" />
+    <None Include="shaders\fs_shaded.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Font Include="opensans.ttf" />
