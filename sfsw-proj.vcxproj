@@ -159,6 +159,7 @@
     <ClCompile Include="src\shader.cpp" />
     <ClCompile Include="src\store.cpp" />
     <ClCompile Include="src\texture.cpp" />
+    <ClCompile Include="src\viewport.cpp" />
     <ClCompile Include="src\window.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -179,6 +180,7 @@
     <ClInclude Include="inc\shader.hpp" />
     <ClInclude Include="inc\store.hpp" />
     <ClInclude Include="inc\texture.hpp" />
+    <ClInclude Include="inc\viewport.hpp" />
     <ClInclude Include="inc\window.hpp" />
   </ItemGroup>
   <ItemGroup>
