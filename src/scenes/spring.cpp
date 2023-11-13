@@ -207,11 +207,13 @@ namespace mini {
 		m_num_data_points = 0;
 
 		m_mass = m_m0;
+		m_mass_inv = 1.0f / m_mass;
 		m_spring_coefficient = m_c0;
 		m_friction_coefficient = m_k0;
 		m_step = m_h0;
 
 		const float m = m_mass;
+		const float mi = m_mass_inv;
 		const float c = m_spring_coefficient;
 		const float k = m_friction_coefficient;
 
@@ -221,7 +223,7 @@ namespace mini {
 		m_time = 0.0f;
 		m_x = m_x0;
 		m_dx = m_dx0;
-		m_ddx = (c * (w - m_x) - k * m_dx + h) / m;
+		m_ddx = (c * (w - m_x) - k * m_dx + h) * mi;
 
 		m_push_data_point(m_time, c * (w - m_x0), -k * m_dx0, h, m_x, m_dx, m_ddx);
 	}
@@ -242,6 +244,7 @@ namespace mini {
 		while (m_step_timer > m_step) {
 			const float step = m_step;
 			const float m = m_mass;
+			const float mi = m_mass_inv;
 			const float c = m_spring_coefficient;
 			const float k = m_friction_coefficient;
 
@@ -258,7 +261,7 @@ namespace mini {
 			// euler method
 			const float x1 = x0 + step * dx0;
 			const float dx1 = dx0 + step * ddx0;
-			const float ddx1 = (c * (w - x1) - k * dx1 + h) / m;
+			const float ddx1 = (c * (w - x1) - k * dx1 + h) * mi;
 
 			// set new values
 			m_ddx = ddx1;
