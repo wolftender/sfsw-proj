@@ -29,13 +29,21 @@ namespace mini {
 
 	top_scene::simulation_state_t::simulation_state_t(const simulation_parameters_t& parameters) :
 		Q(1.0f, 0.0f, 0.0f, 0.0f),
-		W(0.0f, 0.0f, 1.0f),
+		W(1.0f, 1.0f, 1.0f),
 		time(0.0f), step_timer(0.0f),
 		parameters(parameters) {
 
+		// initial angular speed
+		W = W * parameters.angular_velocity;
+
 		// initial rotation calculation
+		float angle = glm::atan(1.0f / glm::sqrt(2.0f));
+		float angle_x = angle - PI * 0.5f + parameters.cube_deviation;
+
 		auto start_rotation = Q;
-		start_rotation = start_rotation * glm::angleAxis(-0.33f * PI, glm::normalize(glm::vec3{ 1.0f, 0.0f, -1.0f }));
+
+		start_rotation = start_rotation * glm::angleAxis(0.25f * PI, glm::vec3{ 0.0f, -1.0f, 0.0f });
+		start_rotation = glm::angleAxis(angle_x, glm::vec3{ 1.0f, 0.0f, 0.0f }) * start_rotation;
 
 		Q = start_rotation;
 
@@ -95,6 +103,8 @@ namespace mini {
 			t0 = t0 + parameters.int_step;
 			step_timer -= parameters.int_step;
 		}
+
+		time += delta_time;
 	}
 
 	top_scene::top_scene(application_base& app) : scene_base(app),
@@ -124,6 +134,13 @@ namespace mini {
 		if (cube_shader) {
 			m_cube = std::make_shared<cube_object>(cube_shader);
 		}
+
+		if (line_shader) {
+			m_diagonal = std::make_shared<curve>(line_shader);
+			m_diagonal->append_position({0.0f, 0.0f, 0.0f});
+			m_diagonal->append_position({-1.0f, -1.0f, -1.0f});
+			m_diagonal->set_color({1.0f, 0.0f, 1.0f, 1.0f});
+		}
 	}
 
 	top_scene::~top_scene() { }
@@ -144,15 +161,33 @@ namespace mini {
 	}
 
 	void top_scene::render(app_context& context) {
+		context.clear_lights();
+		auto& light = context.get_light(0);
+
+		light.color = {1.0f, 1.0f, 1.0f};
+		light.intensity = 1.0f;
+		light.position = {0.0f, -5.0f, 0.0f};
+		light.att_const = 1.0f;
+
 		if (m_grid && m_display_grid) {
 			auto grid_model = glm::mat4x4(1.0f);
 			context.draw(m_grid, grid_model);
 		}
 
+		const float edge_len = SQRT3INV * m_state.parameters.diagonal_length;
+
+		if (m_diagonal && m_display_diagonal) {
+			auto diagonal_model = glm::mat4x4(1.0f);
+
+			diagonal_model = glm::scale(diagonal_model, 2.0f * glm::vec3{ edge_len, edge_len, edge_len });
+			diagonal_model = glm::mat4_cast(m_state.Q) * diagonal_model;
+
+			context.draw(m_diagonal, diagonal_model);
+		}
+
 		if (m_cube && m_display_cube) {
 			auto cube_model = glm::mat4x4(1.0f);
 
-			const float edge_len = SQRT3INV * m_state.parameters.diagonal_length;
 			cube_model = glm::scale(cube_model, { edge_len, edge_len, edge_len });
 			cube_model = glm::translate(cube_model, { -1.0f, -1.0f, -1.0f });
 			cube_model = glm::mat4_cast(m_state.Q) * cube_model;

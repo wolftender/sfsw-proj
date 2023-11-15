@@ -48,6 +48,8 @@ namespace mini {
 		m_screen_shader = std::make_unique<shader_program> (screen_vertex_source, screen_fragment_source);
 		m_screen_shader->compile ();
 
+		m_ambient = glm::vec3{ 0.2f, 0.2f, 0.2f };
+
 		m_init_frame_buffer ();
 		m_init_screen_quad ();
 	}
@@ -100,6 +102,36 @@ namespace mini {
 
 	const GLuint app_context::get_front_buffer () const {
 		return m_colorbuffer[front];
+	}
+
+	const point_light_t& app_context::get_light(const uint64_t index) const {
+		return m_lights[index];
+	}
+
+	point_light_t& app_context::get_light(const uint64_t index) {
+		return m_lights[index];
+	}
+
+	void app_context::clear_lights() {
+		for (auto& light : m_lights) {
+			light.intensity = 0.0f;
+		}
+	}
+
+	void app_context::set_lights(shader_program& shader) const {
+		shader.set_uniform("u_ambient", m_ambient);
+		shader.set_uniform("u_camera_position", get_camera().get_position());
+		shader.set_uniform("u_gamma", 0.85f);
+
+		for (int i = 0; i < 10; ++i) {
+			const auto& light = m_lights[i];
+			shader.set_uniform("u_point_lights[" + std::to_string(i) + "].position", light.position);
+			shader.set_uniform("u_point_lights[" + std::to_string(i) + "].color", light.color);
+			shader.set_uniform("u_point_lights[" + std::to_string(i) + "].intensity", light.intensity);
+			shader.set_uniform("u_point_lights[" + std::to_string(i) + "].att_const", light.att_const);
+			shader.set_uniform("u_point_lights[" + std::to_string(i) + "].att_lin", light.att_lin);
+			shader.set_uniform("u_point_lights[" + std::to_string(i) + "].att_sq", light.att_sq);
+		}
 	}
 
 	camera & app_context::get_camera () {

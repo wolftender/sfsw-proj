@@ -182,6 +182,9 @@ namespace mini {
 		m_shader->set_uniform("u_world", world_matrix);
 		m_shader->set_uniform("u_view", view_matrix);
 		m_shader->set_uniform("u_projection", proj_matrix);
+		m_shader->set_uniform("u_surface_color", glm::vec4{1.0f, 1.0f, 0.0f, 0.75f});
+
+		context.set_lights(*m_shader);
 
 		glDrawElements(GL_TRIANGLES, cube_indices.size(), GL_UNSIGNED_INT, NULL);
 		glBindVertexArray(0);

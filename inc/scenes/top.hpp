@@ -64,6 +64,7 @@ namespace mini {
 			std::shared_ptr<grid_object> m_grid;
 			std::shared_ptr<cube_object> m_cube;
 			std::shared_ptr<curve> m_curve;
+			std::shared_ptr<curve> m_diagonal;
 
 			viewport_window m_viewport;
 
