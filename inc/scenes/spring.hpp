@@ -16,6 +16,7 @@ namespace mini {
 			float m_time; // t
 			float m_step; // h
 			float m_step_timer;
+			float m_mass_inv; // 1/m
 
 			float m_k0, m_c0, m_m0, m_h0;
 
