@@ -75,5 +75,6 @@ void main() {
     }
 
     //frag_color = vec4(fs_in.world_normal.xyz, 1.0);
-    frag_color = gamma_correct (vec4 (u_ambient * u_surface_color.xyz, u_surface_color.w) + phong_component, u_gamma);
+    frag_color = gamma_correct (vec4 (u_ambient * u_surface_color.xyz, 1.0) + phong_component, u_gamma);
+    frag_color.w = u_surface_color.w;
 }

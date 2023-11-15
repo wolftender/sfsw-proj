@@ -165,7 +165,7 @@ namespace mini {
 		auto& light = context.get_light(0);
 
 		light.color = {1.0f, 1.0f, 1.0f};
-		light.intensity = 1.0f;
+		light.intensity = 3.0f;
 		light.position = {0.0f, -5.0f, 0.0f};
 		light.att_const = 1.0f;
 
