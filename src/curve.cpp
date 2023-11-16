@@ -67,6 +67,16 @@ namespace mini {
         m_rebuild_buffers();
     }
 
+    void curve::reset_positions(const std::vector<glm::vec3>& new_positions) {
+        m_points = new_positions;
+        m_rebuild_buffers();
+    }
+
+    void curve::clear_positions() {
+        m_points.clear();
+        m_rebuild_buffers();
+    }
+
     void curve::erase_head() {
         if (m_points.size() == 0) {
             return;

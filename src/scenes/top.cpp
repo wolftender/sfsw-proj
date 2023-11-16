@@ -2,6 +2,8 @@
 #include "scenes/top.hpp"
 
 #include <iostream>
+#include <fstream>
+
 #include <glm/gtc/matrix_transform.hpp>
 
 namespace mini {
@@ -28,10 +30,13 @@ namespace mini {
 		};
 	}
 
-	top_scene::simulation_state_t::simulation_state_t(const simulation_parameters_t& parameters) :
+	top_scene::simulation_state_t::simulation_state_t(
+		const simulation_parameters_t& parameters, 
+		const world_parameters_t* world_params) :
 		Q(1.0f, 0.0f, 0.0f, 0.0f),
 		W(1.0f, 1.0f, 1.0f),
 		time(0.0f), step_timer(0.0f),
+		world_params(world_params),
 		parameters(parameters) {
 
 		// initial angular speed
@@ -79,11 +84,14 @@ namespace mini {
 		while (step_timer > parameters.int_step) {
 			const float h = parameters.int_step;
 
-			const glm::vec3& world_up = {0.0f, -1.0f, 0.0f};
-			const glm::vec3& to_center = diag_local * parameters.diagonal_length * 0.5f;
-			const glm::vec3& local_up = glm::rotate(glm::conjugate(Q), world_up);
+			glm::vec3 N {0.0f, 0.0f, 0.0f};
 
-			const glm::vec3& N = 0.1f * glm::cross(-local_up, to_center);
+			if (world_params->gravity_enabled) {
+				const glm::vec3& world_up = { 0.0f, -1.0f, 0.0f };
+				const glm::vec3& to_center = 0.5f * diag_local * parameters.diagonal_length;
+				const glm::vec3& local_up = glm::rotate(glm::conjugate(Q), world_up);
+				N = world_params->gravity * glm::cross(-local_up, to_center);
+			}
 
 			// first equation IWt = N + (IW)xW
 			// denoted Wt = f(t,W)
@@ -91,7 +99,7 @@ namespace mini {
 				auto k1w = f(t0, N, W);
 				auto k2w = f(t0 + 0.5f * h, N, W + 0.5f * h * k1w);
 				auto k3w = f(t0 + 0.5f * h, N, W + 0.5f * h * k2w);
-				auto k4w = f(t0 + h, N, W + 0.5f * h * k3w);
+				auto k4w = f(t0 + h, N, W + h * k3w);
 
 				W = W + h * (k1w + 2.0f * k2w + 2.0f * k3w + k4w) / 6.0f;
 			}
@@ -102,7 +110,7 @@ namespace mini {
 				auto k1q = g(t0, Q, W);
 				auto k2q = g(t0 + 0.5f * h, Q + 0.5f * h * k1q, W);
 				auto k3q = g(t0 + 0.5f * h, Q + 0.5f * h * k2q, W);
-				auto k4q = g(t0 + h, Q + 0.5f * h * k3q, W);
+				auto k4q = g(t0 + h, Q + h * k3q, W);
 
 				Q = Q + h * (k1q + 2.0f * k2q + 2.0f * k3q + k4q) / 6.0f;
 				Q = glm::normalize(Q);
@@ -117,17 +125,17 @@ namespace mini {
 
 	top_scene::top_scene(application_base& app) : scene_base(app),
 		m_start_params(),
-		m_state(m_start_params),
+		m_world_params(),
+		m_state(m_start_params, &m_world_params),
 		m_viewport(app, "Spinning Top"),
 		m_display_cube(true),
 		m_display_plane(true),
 		m_display_diagonal(true),
 		m_display_grid(true),
 		m_display_path(true),
-		m_max_data_points(MAX_DATA_POINTS),
-		m_num_data_points(0UL) {
+		m_max_data_points(MAX_DATA_POINTS) {
 
-		std::fill(m_path_points.begin(), m_path_points.end(), glm::vec3{0.0f, 0.0f, 0.0f});
+		m_clear_data_points();
 
 		auto line_shader = get_app().get_store().get_shader("line");
 		auto cube_shader = get_app().get_store().get_shader("cube");
@@ -148,6 +156,9 @@ namespace mini {
 			m_diagonal->append_position({0.0f, 0.0f, 0.0f});
 			m_diagonal->append_position({-1.0f, -1.0f, -1.0f});
 			m_diagonal->set_color({1.0f, 0.0f, 1.0f, 1.0f});
+
+			m_curve = std::make_shared<curve>(line_shader);
+			m_curve->set_color({ 0.890f, 0.657f, 0.0178f, 1.0f });
 		}
 	}
 
@@ -166,6 +177,12 @@ namespace mini {
 
 		// integrate the simulation state
 		m_state.integrate(delta_time);
+
+		// push data point to the curve
+		constexpr glm::vec3 diag_vector = -0.5f * glm::vec3{ 1.0f, 1.0f, 1.0f } * SQRT3INV;
+		auto diag_position = glm::rotate(m_state.Q, 2.0f * m_state.parameters.diagonal_length * diag_vector);
+
+		m_push_data_point(m_state.time, diag_position);
 	}
 
 	void top_scene::render(app_context& context) {
@@ -187,7 +204,7 @@ namespace mini {
 		if (m_diagonal && m_display_diagonal) {
 			auto diagonal_model = glm::mat4x4(1.0f);
 
-			diagonal_model = glm::scale(diagonal_model, 2.0f * glm::vec3{ edge_len, edge_len, edge_len });
+			diagonal_model = glm::scale(diagonal_model, glm::vec3{ edge_len, edge_len, edge_len });
 			diagonal_model = glm::mat4_cast(m_state.Q) * diagonal_model;
 
 			context.draw(m_diagonal, diagonal_model);
@@ -196,11 +213,15 @@ namespace mini {
 		if (m_cube && m_display_cube) {
 			auto cube_model = glm::mat4x4(1.0f);
 
-			cube_model = glm::scale(cube_model, { edge_len, edge_len, edge_len });
+			cube_model = glm::scale(cube_model, 0.5f * glm::vec3{ edge_len, edge_len, edge_len });
 			cube_model = glm::translate(cube_model, { -1.0f, -1.0f, -1.0f });
 			cube_model = glm::mat4_cast(m_state.Q) * cube_model;
 
 			context.draw(m_cube, cube_model);
+		}
+
+		if (m_curve && m_display_path) {
+			context.draw(m_curve, glm::mat4x4(1.0f));
 		}
 	}
 
@@ -225,8 +246,43 @@ namespace mini {
 		}
 	}
 
+	inline std::tm localtime_xp(std::time_t timer) {
+		std::tm bt{};
+#if defined(__unix__)
+		localtime_r(&timer, &bt);
+#elif defined(_MSC_VER)
+		localtime_s(&bt, &timer);
+#else
+		static std::mutex mtx;
+		std::lock_guard<std::mutex> lock(mtx);
+		bt = *std::localtime(&timer);
+#endif
+		return bt;
+	}
+
 	void top_scene::m_export_data() {
-		// nothing to export
+		const auto now = std::time(nullptr);
+		const std::tm tm = localtime_xp(now);
+
+		const std::string file_name = std::format("top-{}-{}-{}-{}-{}.txt",
+			tm.tm_year + 1900,
+			tm.tm_mon + 1,
+			tm.tm_mday,
+			tm.tm_hour,
+			tm.tm_min,
+			tm.tm_sec);
+
+		std::ofstream stream(file_name);
+
+		if (stream) {
+			for (auto i = 0; i < m_path_points.size(); ++i) {
+				stream
+					<< m_time_points[i] << " "
+					<< m_path_points[i].x << " "
+					<< m_path_points[i].y << " "
+					<< m_path_points[i].z << std::endl;
+			}
+		}
 	}
 
 	void top_scene::m_gui_settings() {
@@ -249,16 +305,24 @@ namespace mini {
 			ImGui::InputFloat("##top_density", &m_start_params.cube_density);
 
 			gui::prefix_label("Int. Step: ", 250.0f);
-			ImGui::InputFloat("##top_step", &m_start_params.int_step);
+			ImGui::InputFloat("##top_step", &m_start_params.int_step, 0.0001f, 0.001f, "%.5f");
 
 			gui::prefix_label("Ang. Velocity: ", 250.0f);
 			ImGui::InputFloat("##top_angvel", &m_start_params.angular_velocity);
 
 			if (ImGui::Button("Apply Settings")) {
-				m_state = simulation_state_t(m_start_params);
+				m_reset_simulation();
 			}
 
 			ImGui::NewLine();
+		}
+
+		if (ImGui::CollapsingHeader("World Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
+			gui::prefix_label("Gravity Enabled: ", 250.0f);
+			ImGui::Checkbox("##top_gravity_on", &m_world_params.gravity_enabled);
+
+			gui::prefix_label("Gravity Force: ", 250.0f);
+			ImGui::InputFloat("##top_gravity_f", &m_world_params.gravity);
 		}
 
 		if (ImGui::CollapsingHeader("Display Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -281,5 +345,42 @@ namespace mini {
 
 	void top_scene::m_gui_viewport() {
 		m_viewport.display();
+	}
+
+	void top_scene::m_reset_simulation() {
+		m_state = simulation_state_t(m_start_params, &m_world_params);
+		m_clear_data_points();
+	}
+
+	void top_scene::m_clear_data_points() {
+		m_path_points.clear();
+		m_time_points.clear();
+		m_path_points.reserve(m_max_data_points);
+		m_time_points.reserve(m_max_data_points);
+
+		if (m_curve) {
+			m_curve->clear_positions();
+		}
+	}
+
+	void top_scene::m_push_data_point(const float time, const glm::vec3& point) {
+		auto num_points = m_path_points.size();
+
+		if (num_points < m_max_data_points) {
+			m_path_points.push_back(point);
+			m_time_points.push_back(time);
+		} else {
+			for (std::size_t i = 0; i < num_points - 1; ++i) {
+				m_path_points[i] = m_path_points[i + 1];
+				m_time_points[i] = m_time_points[i + 1];
+			}
+
+			m_path_points[num_points - 1] = point;
+			m_time_points[num_points - 1] = time;
+		}
+
+		if (m_curve) {
+			m_curve->reset_positions(m_path_points);
+		}
 	}
 }

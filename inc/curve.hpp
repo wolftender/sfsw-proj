@@ -47,6 +47,9 @@ namespace mini {
             void append_positions(const std::vector<glm::vec3> & positions);
             void prepend_positions(const std::vector<glm::vec3> & positions);
 
+            void reset_positions(const std::vector<glm::vec3> & new_positions);
+            void clear_positions();
+
             void erase_tail();
             void erase_head();
 
