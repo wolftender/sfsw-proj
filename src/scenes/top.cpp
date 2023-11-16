@@ -1,6 +1,7 @@
 #include "gui.hpp"
 #include "scenes/top.hpp"
 
+#include <iostream>
 #include <glm/gtc/matrix_transform.hpp>
 
 namespace mini {
@@ -54,7 +55,8 @@ namespace mini {
 	void top_scene::simulation_state_t::integrate(float delta_time) {
 		const auto& I = inertia_tensor;
 		const auto& Iinv = inertia_tensor_inv;
-		const glm::vec3& N {0.0f, 0.0f, 0.0f};
+
+		constexpr auto diag_local = glm::vec3{1.0f, 1.0f, 1.0f} * SQRT3INV;
 
 		// window was dragged probably
 		if (delta_time > 0.1f) {
@@ -65,7 +67,7 @@ namespace mini {
 		step_timer += delta_time;
 
 		// dW/dt
-		const auto f = [&](const float t, const glm::vec3& W) -> glm::vec3 {
+		const auto f = [&](const float t, const glm::vec3& N, const glm::vec3& W) -> glm::vec3 {
 			return Iinv * (N + glm::cross((I * W), W));
 		};
 
@@ -77,13 +79,19 @@ namespace mini {
 		while (step_timer > parameters.int_step) {
 			const float h = parameters.int_step;
 
+			const glm::vec3& world_up = {0.0f, -1.0f, 0.0f};
+			const glm::vec3& to_center = diag_local * parameters.diagonal_length * 0.5f;
+			const glm::vec3& local_up = glm::rotate(glm::conjugate(Q), world_up);
+
+			const glm::vec3& N = 0.1f * glm::cross(-local_up, to_center);
+
 			// first equation IWt = N + (IW)xW
 			// denoted Wt = f(t,W)
 			{
-				auto k1w = f(t0, W);
-				auto k2w = f(t0 + 0.5f * h, W + 0.5f * h * k1w);
-				auto k3w = f(t0 + 0.5f * h, W + 0.5f * h * k2w);
-				auto k4w = f(t0 + h, W + 0.5f * h * k3w);
+				auto k1w = f(t0, N, W);
+				auto k2w = f(t0 + 0.5f * h, N, W + 0.5f * h * k1w);
+				auto k3w = f(t0 + 0.5f * h, N, W + 0.5f * h * k2w);
+				auto k4w = f(t0 + h, N, W + 0.5f * h * k3w);
 
 				W = W + h * (k1w + 2.0f * k2w + 2.0f * k3w + k4w) / 6.0f;
 			}
