@@ -12,10 +12,16 @@ namespace mini {
 	constexpr float PI = glm::pi<float>();
 
 	// simulation code starts here
-	static inline void cube_inertia_tensor(const float diagonal, const float density, glm::mat3x3& tensor, glm::mat3x3& inverse) {
+	static inline void cube_inertia_tensor(
+		const float diagonal, 
+		const float density, 
+		float& mass,
+		glm::mat3x3& tensor, 
+		glm::mat3x3& inverse) {
 		// edge width
 		const float a = SQRT3INV * diagonal;
-		const float mass = density * a * a * a;
+		
+		mass = density * a * a * a;
 		
 		tensor = mass * glm::mat3x3{
 			2.0f*a*a/3.0f, -a*a/4.0f, -a*a/4.0f,
@@ -54,7 +60,12 @@ namespace mini {
 		Q = start_rotation;
 
 		// compute inertia tensor based on parameters
-		cube_inertia_tensor(parameters.diagonal_length, parameters.cube_density, inertia_tensor, inertia_tensor_inv);
+		cube_inertia_tensor(
+			parameters.diagonal_length, 
+			parameters.cube_density, 
+			mass, 
+			inertia_tensor, 
+			inertia_tensor_inv);
 	}
 
 	void top_scene::simulation_state_t::integrate(float delta_time) {
@@ -90,7 +101,7 @@ namespace mini {
 				const glm::vec3& world_up = { 0.0f, -1.0f, 0.0f };
 				const glm::vec3& to_center = 0.5f * diag_local * parameters.diagonal_length;
 				const glm::vec3& local_up = glm::rotate(glm::conjugate(Q), world_up);
-				N = world_params->gravity * glm::cross(-local_up, to_center);
+				N = mass * world_params->gravity * glm::cross(-local_up, to_center);
 			}
 
 			// first equation IWt = N + (IW)xW

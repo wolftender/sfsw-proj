@@ -49,6 +49,7 @@ namespace mini {
 
 				glm::mat3x3 inertia_tensor;
 				glm::mat3x3 inertia_tensor_inv;
+				float mass;
 
 				glm::vec3 W;
 				glm::quat Q;
