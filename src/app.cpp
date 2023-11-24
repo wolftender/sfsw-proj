@@ -8,6 +8,7 @@
 
 #include "scenes/spring.hpp"
 #include "scenes/top.hpp"
+#include "scenes/slerp.hpp"
 	
 namespace mini {
 	application::application() : 
@@ -24,8 +25,9 @@ namespace mini {
 		m_store.load_shader("billboard_s", "shaders/vs_billboard_s.glsl", "shaders/fs_billboard.glsl");
 		m_store.load_shader("line", "shaders/vs_basic.glsl", "shaders/fs_solidcolor.glsl", "shaders/gs_lines.glsl");
 		m_store.load_shader("cube", "shaders/vs_shaded.glsl", "shaders/fs_shaded.glsl");
+		m_store.load_shader("gizmo", "shaders/vs_position.glsl", "shaders/fs_solidcolor.glsl");
 
-		m_scene = std::make_unique<top_scene>(*this);
+		m_scene = std::make_unique<slerp_scene>(*this);
 	}
 
 	scene_base& application::get_scene() {
@@ -126,6 +128,11 @@ namespace mini {
 
 				if (ImGui::MenuItem("Spinning Top", "Ctrl + Shift + F2", nullptr, true)) {
 					m_scene = std::make_unique<top_scene>(*this);
+					m_layout_ready = false;
+				}
+
+				if (ImGui::MenuItem("Rotation Demo", "Ctrl + Shift + F3", nullptr, true)) {
+					m_scene = std::make_unique<slerp_scene>(*this);
 					m_layout_ready = false;
 				}
 

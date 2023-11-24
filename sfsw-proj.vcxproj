@@ -149,11 +149,13 @@
     <ClCompile Include="src\context.cpp" />
     <ClCompile Include="src\cube.cpp" />
     <ClCompile Include="src\curve.cpp" />
+    <ClCompile Include="src\gizmo.cpp" />
     <ClCompile Include="src\grid.cpp" />
     <ClCompile Include="src\gui.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\mathparse.cpp" />
     <ClCompile Include="src\scamera.cpp" />
+    <ClCompile Include="src\scenes\slerp.cpp" />
     <ClCompile Include="src\scenes\spring.cpp" />
     <ClCompile Include="src\scenes\top.cpp" />
     <ClCompile Include="src\shader.cpp" />
@@ -170,11 +172,13 @@
     <ClInclude Include="inc\cube.hpp" />
     <ClInclude Include="inc\curve.hpp" />
     <ClInclude Include="inc\function.hpp" />
+    <ClInclude Include="inc\gizmo.hpp" />
     <ClInclude Include="inc\grid.hpp" />
     <ClInclude Include="inc\gui.hpp" />
     <ClInclude Include="inc\mathparse.hpp" />
     <ClInclude Include="inc\scamera.hpp" />
     <ClInclude Include="inc\scene.hpp" />
+    <ClInclude Include="inc\scenes\slerp.hpp" />
     <ClInclude Include="inc\scenes\spring.hpp" />
     <ClInclude Include="inc\scenes\top.hpp" />
     <ClInclude Include="inc\shader.hpp" />

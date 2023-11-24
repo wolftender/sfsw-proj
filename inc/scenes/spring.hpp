@@ -60,6 +60,8 @@ namespace mini {
 
 		public:
 			spring_scene(application_base& app);
+			spring_scene(const spring_scene&) = delete;
+			spring_scene& operator=(const spring_scene&) = delete;
 
 			virtual void layout(ImGuiID dockspace_id) override;
 			virtual void integrate(float delta_time) override;

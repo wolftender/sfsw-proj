@@ -8,6 +8,7 @@ namespace mini {
 	class viewport_window final {
 		private:
 			application_base& m_app;
+			app_context& m_context;
 
 			bool m_viewport_focus;
 			bool m_mouse_in_viewport;
@@ -24,6 +25,7 @@ namespace mini {
 			
 		public:
 			viewport_window(application_base& app, const std::string_view& name);
+			viewport_window(application_base& app, app_context& context, const std::string_view& name);
 			~viewport_window();
 
 			viewport_window(const viewport_window&) = delete;

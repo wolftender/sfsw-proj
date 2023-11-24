@@ -6,11 +6,28 @@
 namespace mini {
 	viewport_window::viewport_window(application_base& app, const std::string_view& name) : 
 		m_app(app),
+		m_context(app.get_context()),
 		m_name(name),
 		m_viewport_focus(false),
 		m_mouse_in_viewport(false),
 		m_last_vp_width(0),
 		m_last_vp_height(0),
+		m_vp_mouse_offset{0, 0},
+		m_distance(10.0f),
+		m_cam_pitch(-0.7f),
+		m_cam_yaw(0.0f),
+		m_camera_target{ 0.0f, 0.0f, 0.0f } {
+	}
+
+	viewport_window::viewport_window(application_base& app, app_context& context, const std::string_view& name) :
+		m_app(app),
+		m_context(context),
+		m_name(name),
+		m_viewport_focus(false),
+		m_mouse_in_viewport(false),
+		m_last_vp_width(0),
+		m_last_vp_height(0),
+		m_vp_mouse_offset{ 0, 0 },
 		m_distance(10.0f),
 		m_cam_pitch(-0.7f),
 		m_cam_yaw(0.0f),
@@ -91,12 +108,12 @@ namespace mini {
 
 		cam_pos = cam_rotation * cam_pos;
 
-		m_app.get_context().get_camera().set_position(cam_pos);
-		m_app.get_context().get_camera().set_target(m_camera_target);
+		m_context.get_camera().set_position(cam_pos);
+		m_context.get_camera().set_target(m_camera_target);
 	}
 
 	void viewport_window::display() {
-		auto& context = m_app.get_context();
+		auto& context = m_context;
 
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(320, 240));
 		ImGui::Begin(m_name.c_str(), NULL);
