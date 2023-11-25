@@ -1,3 +1,5 @@
+#define IMGUI_DEFINE_MATH_OPERATORS
+
 #include <iostream>
 
 #include <glad/glad.h>

@@ -3,9 +3,6 @@
 #include <ios>
 #include <chrono>
 
-#include <imgui.h>
-#include <imgui_internal.h>
-
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/constants.hpp>
 
