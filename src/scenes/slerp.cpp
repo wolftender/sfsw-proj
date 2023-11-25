@@ -2,6 +2,7 @@
 #include "scenes/slerp.hpp"
 
 #include <iostream>
+#include <glm/gtx/compatibility.hpp>
 
 namespace mini {
 	slerp_scene::simulation_state_t::simulation_state_t(simulation_settings_t settings, bool animate) :
@@ -16,8 +17,8 @@ namespace mini {
 	}
 
 	glm::mat4x4 slerp_scene::simulation_state_t::get_transform_e(float t) {
-		glm::vec3 position = glm::mix(settings.start_position, settings.end_position, t);
-		glm::vec3 euler = glm::mix(settings.start_rotation_e, settings.end_rotation_e, t);
+		glm::vec3 position = glm::lerp(settings.start_position, settings.end_position, t);
+		glm::vec3 euler = glm::lerp(settings.start_rotation_e, settings.end_rotation_e, t);
 
 		glm::quat rotation = { 1.0f, 0.0f, 0.0f, 0.0f };
 
@@ -33,13 +34,13 @@ namespace mini {
 	}
 
 	glm::mat4x4 slerp_scene::simulation_state_t::get_transform_q(float t) {
-		glm::vec3 position = glm::mix(settings.start_position, settings.end_position, t);
+		glm::vec3 position = glm::lerp(settings.start_position, settings.end_position, t);
 		glm::quat rotation;
 
 		if (settings.slerp) {
 			rotation = glm::slerp(settings.start_rotation_q, settings.end_rotation_q, t);
 		} else {
-			rotation = glm::mix(settings.start_rotation_q, settings.end_rotation_q, t);
+			rotation = glm::lerp(settings.start_rotation_q, settings.end_rotation_q, t);
 		}
 
 		glm::mat4x4 transform(1.0f);
