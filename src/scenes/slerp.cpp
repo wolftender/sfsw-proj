@@ -5,6 +5,119 @@
 #include <glm/gtx/compatibility.hpp>
 
 namespace mini {
+	// quaternion implementation
+	quaternion operator*(const float s, const quaternion& q) {
+		return quaternion{ q.w * s, q.x * s, q.y * s, q.z * s };
+	}
+
+	quaternion operator*(const quaternion& q, const float s) {
+		return s * q;
+	}
+
+	quaternion operator*(const quaternion& q1, const quaternion& q2) {
+		auto w1 = q1.w, x1 = q1.x, y1 = q1.y, z1 = q1.z;
+		auto w2 = q2.w, x2 = q2.x, y2 = q2.y, z2 = q2.z;
+
+		return quaternion{
+			w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2,
+			w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2,
+			w1 * y2 - x1 * z2 + y1 * w2 + z1 * x2,
+			w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2
+		};
+	}
+
+	quaternion operator+(const quaternion& q1, const quaternion& q2) {
+		return quaternion{
+			q1.w + q2.w,
+			q1.x + q2.x,
+			q1.y + q2.y,
+			q1.z + q2.z,
+		};
+	}
+
+	quaternion operator/(const quaternion& q, const float s) {
+		return quaternion{ q.w / s, q.x / s, q.y / s, q.z / s };
+	}
+
+	quaternion conjugate(const quaternion& q) {
+		return quaternion{ q.w, -q.x, -q.y, -q.z };
+	}
+
+	float norm(const quaternion& q) {
+		return glm::sqrt(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w);
+	}
+
+	quaternion normalize(const quaternion& q) {
+		auto n = norm(q);
+		return q / n;
+	}
+
+	quaternion angle_axis(float angle, const glm::vec3& axis) {
+		angle = angle * 0.5f;
+		auto s = glm::sin(angle);
+
+		return normalize({
+			glm::cos(angle),
+			s * axis.x,
+			s * axis.y,
+			s * axis.z
+		});
+	}
+
+	glm::mat4x4 quat_to_matrix(const quaternion& q) {
+		auto x = q.x, y = q.y, z = q.z, w = q.w;
+		auto xx = x * x * 2;
+		auto yx = y * x * 2;
+		auto yy = y * y * 2;
+		auto zx = z * x * 2;
+		auto zy = z * y * 2;
+		auto zz = z * z * 2;
+		auto wx = w * x * 2;
+		auto wy = w * y * 2;
+		auto wz = w * z * 2;
+
+		return glm::mat4x4{
+			1.0f - yy - zz, yx - wz, zx + wy, 0.0f,
+			yx + wz, 1.0f - xx - zz, zy - wx, 0.0f,
+			zx - wy, zy + wx, 1.0f - xx - yy, 0.0f,
+			0.0f, 0.0f, 0.0f, 1.0f
+		};
+	}
+
+	quaternion quat_lerp(const quaternion& q1, const quaternion& q2, float t) {
+		return normalize((q1 * (1.0f - t)) + (q2 * t));
+	}
+
+	quaternion quat_slerp(const quaternion& q1, const quaternion& q2, float t) {
+		auto ax = q1.x, ay = q1.y, az = q1.z, aw = q1.w;
+		auto bx = q2.x, by = q2.y, bz = q2.z, bw = q2.w;
+		auto dot = ax * bx + ay * by + az * bz + aw * bw;
+
+		//t = t * 0.5f;
+		float theta = glm::acos(dot);
+
+		if (theta < 0.0f) {
+			theta = -theta;
+		}
+
+		float st = glm::sin(theta);
+		float sut = glm::sin(t * theta);
+		float sout = glm::sin((1.0f - t) * theta);
+		float c1 = sout / st;
+		float c2 = sut / st;
+
+		quaternion q{
+			c1 * q1.w + c2 * q2.w,
+			c1 * q1.x + c2 * q2.x,
+			c1 * q1.y + c2 * q2.y,
+			c1 * q1.z + c2 * q2.z
+		};
+
+		return normalize(q);
+	}
+
+
+	// scene
 	slerp_scene::simulation_state_t::simulation_state_t(simulation_settings_t settings, bool animate) :
 		settings(settings), animate(animate), elapsed(0.0f) { }
 
@@ -20,32 +133,32 @@ namespace mini {
 		glm::vec3 position = glm::lerp(settings.start_position, settings.end_position, t);
 		glm::vec3 euler = glm::lerp(settings.start_rotation_e, settings.end_rotation_e, t);
 
-		glm::quat rotation = { 1.0f, 0.0f, 0.0f, 0.0f };
+		quaternion rotation = { 1.0f, 0.0f, 0.0f, 0.0f };
 
-		rotation = rotation * glm::angleAxis(euler[2], glm::vec3{ 0.0f, 0.0f, 1.0f });
-		rotation = rotation * glm::angleAxis(euler[1], glm::vec3{ 0.0f, 1.0f, 0.0f });
-		rotation = rotation * glm::angleAxis(euler[0], glm::vec3{ 1.0f, 0.0f, 0.0f });
+		rotation = rotation * angle_axis(euler[2], glm::vec3{ 0.0f, 0.0f, 1.0f });
+		rotation = rotation * angle_axis(euler[1], glm::vec3{ 0.0f, 1.0f, 0.0f });
+		rotation = rotation * angle_axis(euler[0], glm::vec3{ 1.0f, 0.0f, 0.0f });
 
 		glm::mat4x4 transform(1.0f);
 		transform = glm::translate(transform, position);
-		transform = transform * glm::mat4_cast(rotation);
+		transform = transform * quat_to_matrix(rotation);
 
 		return transform;
 	}
 
 	glm::mat4x4 slerp_scene::simulation_state_t::get_transform_q(float t) {
 		glm::vec3 position = glm::lerp(settings.start_position, settings.end_position, t);
-		glm::quat rotation;
+		quaternion rotation;
 
 		if (settings.slerp) {
-			rotation = glm::slerp(settings.start_rotation_q, settings.end_rotation_q, t);
+			rotation = quat_slerp(settings.start_rotation_q, settings.end_rotation_q, t);
 		} else {
-			rotation = glm::lerp(settings.start_rotation_q, settings.end_rotation_q, t);
+			rotation = quat_lerp(settings.start_rotation_q, settings.end_rotation_q, t);
 		}
 
 		glm::mat4x4 transform(1.0f);
 		transform = glm::translate(transform, position);
-		transform = transform * glm::mat4_cast(rotation);
+		transform = transform * quat_to_matrix(rotation);
 
 		return transform;
 	}
@@ -134,7 +247,7 @@ namespace mini {
 		}
 	}
 
-	inline void joint_rotation_editor(const std::string_view id, glm::quat& q, glm::vec3& e, bool& quat_mode) {
+	inline void joint_rotation_editor(const std::string_view id, quaternion& q, glm::vec3& e, bool& quat_mode) {
 		std::string id_checkbox = std::format("##_{}_checkbox", id);
 		std::string id_quat_x = std::format("##_{}_qx", id);
 		std::string id_quat_y = std::format("##_{}_qy", id);
@@ -160,7 +273,7 @@ namespace mini {
 			changed = ImGui::InputFloat(id_quat_z.c_str(), &q.z) || changed;
 
 			// convert quat to euler
-			e = glm::eulerAngles(q);
+			e = glm::eulerAngles(glm::quat(q.w, q.x, q.y, q.z));
 		} else {
 			gui::prefix_label("x: ", 250.0f);
 			changed = ImGui::InputFloat(id_quat_x.c_str(), &e.x) || changed;
@@ -172,11 +285,11 @@ namespace mini {
 			changed = ImGui::InputFloat(id_quat_z.c_str(), &e.z) || changed;
 
 			// convert euler to quat
-			glm::quat rotation = { 1.0f, 0.0f, 0.0f, 0.0f };
+			quaternion rotation = { 1.0f, 0.0f, 0.0f, 0.0f };
 
-			rotation = rotation * glm::angleAxis(e[2], glm::vec3{ 0.0f, 0.0f, 1.0f });
-			rotation = rotation * glm::angleAxis(e[1], glm::vec3{ 0.0f, 1.0f, 0.0f });
-			rotation = rotation * glm::angleAxis(e[0], glm::vec3{ 1.0f, 0.0f, 0.0f });
+			rotation = rotation * angle_axis(e[2], glm::vec3{ 0.0f, 0.0f, 1.0f });
+			rotation = rotation * angle_axis(e[1], glm::vec3{ 0.0f, 1.0f, 0.0f });
+			rotation = rotation * angle_axis(e[0], glm::vec3{ 1.0f, 0.0f, 0.0f });
 
 			q = rotation;
 		}

@@ -7,16 +7,39 @@
 #include <glm/gtc/quaternion.hpp>
 
 namespace mini {
+	struct quaternion {
+		float w, x, y, z;
+
+		quaternion() :
+			w(1.0f), x(0.0f), y(0.0f), z(0.0f) { }
+		quaternion(float w, float x, float y, float z) :
+			w(w), x(x), y(y), z(z) { }
+	};
+
+	quaternion operator*(const float s, const quaternion& q);
+	quaternion operator*(const quaternion& q, const float s);
+	quaternion operator*(const quaternion& q1, const quaternion& q2);
+	quaternion operator+(const quaternion& q1, const quaternion& q2);
+	quaternion operator/(const quaternion& q, const float s);
+
+	quaternion conjugate(const quaternion& q);
+	float norm(const quaternion& q);
+	quaternion normalize(const quaternion& q);
+	quaternion angle_axis(float angle, const glm::vec3& axis);
+	glm::mat4x4 quat_to_matrix(const quaternion& q);
+	quaternion quat_lerp(const quaternion& q1, const quaternion& q2, float t);
+	quaternion quat_slerp(const quaternion& q1, const quaternion& q2, float t);
+
 	class slerp_scene : public scene_base {
 		private:
 			struct simulation_settings_t {
 				glm::vec3 start_position;
 				glm::vec3 start_rotation_e;
-				glm::quat start_rotation_q;
+				quaternion start_rotation_q;
 
 				glm::vec3 end_position;
 				glm::vec3 end_rotation_e;
-				glm::quat end_rotation_q;
+				quaternion end_rotation_q;
 
 				bool start_quat_mode, end_quat_mode;
 				bool slerp, loop;
