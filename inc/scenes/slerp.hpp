@@ -19,7 +19,7 @@ namespace mini {
 				glm::quat end_rotation_q;
 
 				bool start_quat_mode, end_quat_mode;
-				bool slerp;
+				bool slerp, loop;
 				int num_frames;
 
 				simulation_settings_t() :
@@ -31,17 +31,19 @@ namespace mini {
 					end_rotation_q(1.0f, 0.0f, 0.0f, 0.0f),
 					start_quat_mode(false),
 					end_quat_mode(false),
+					loop(false),
 					slerp(false),
 					num_frames(10) { }
 			};
 
 			struct simulation_state_t {
 				simulation_settings_t settings;
-				glm::vec3 position;
-				glm::vec3 rotation_e;
-				glm::quat rotation_q;
+				float elapsed;
+				bool animate;
 
-				simulation_state_t(simulation_settings_t settings);
+				simulation_state_t(simulation_settings_t settings, bool animate);
+
+				void update(float delta_time);
 
 				glm::mat4x4 get_transform_e(float t);
 				glm::mat4x4 get_transform_q(float t);
@@ -57,6 +59,7 @@ namespace mini {
 			std::shared_ptr<gizmo> m_gizmo;
 
 			simulation_settings_t m_settings;
+			simulation_state_t m_state;
 
 		public:
 			slerp_scene(application_base& app);

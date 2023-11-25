@@ -4,12 +4,58 @@
 #include <iostream>
 
 namespace mini {
+	slerp_scene::simulation_state_t::simulation_state_t(simulation_settings_t settings, bool animate) :
+		settings(settings), animate(animate), elapsed(0.0f) { }
+
+	void slerp_scene::simulation_state_t::update(float delta_time) {
+		elapsed += 0.3f * delta_time;
+
+		if (elapsed > 1.0f) {
+			elapsed = 1.0f;
+		}
+	}
+
+	glm::mat4x4 slerp_scene::simulation_state_t::get_transform_e(float t) {
+		glm::vec3 position = glm::mix(settings.start_position, settings.end_position, t);
+		glm::vec3 euler = glm::mix(settings.start_rotation_e, settings.end_rotation_e, t);
+
+		glm::quat rotation = { 1.0f, 0.0f, 0.0f, 0.0f };
+
+		rotation = rotation * glm::angleAxis(euler[2], glm::vec3{ 0.0f, 0.0f, 1.0f });
+		rotation = rotation * glm::angleAxis(euler[1], glm::vec3{ 0.0f, 1.0f, 0.0f });
+		rotation = rotation * glm::angleAxis(euler[0], glm::vec3{ 1.0f, 0.0f, 0.0f });
+
+		glm::mat4x4 transform(1.0f);
+		transform = glm::translate(transform, position);
+		transform = transform * glm::mat4_cast(rotation);
+
+		return transform;
+	}
+
+	glm::mat4x4 slerp_scene::simulation_state_t::get_transform_q(float t) {
+		glm::vec3 position = glm::mix(settings.start_position, settings.end_position, t);
+		glm::quat rotation;
+
+		if (settings.slerp) {
+			rotation = glm::slerp(settings.start_rotation_q, settings.end_rotation_q, t);
+		} else {
+			rotation = glm::mix(settings.start_rotation_q, settings.end_rotation_q, t);
+		}
+
+		glm::mat4x4 transform(1.0f);
+		transform = glm::translate(transform, position);
+		transform = transform * glm::mat4_cast(rotation);
+
+		return transform;
+	}
+
 	slerp_scene::slerp_scene(application_base& app) : 
 		scene_base(app),
+		m_state(m_settings, true),
 		m_context1(app.get_context()),
 		m_context2(video_mode_t(600, 400)),
-		m_viewport1(app, m_context1, "Slerp"),
-		m_viewport2(app, m_context2, "Lerp") {
+		m_viewport1(app, m_context1, "Quaternion"),
+		m_viewport2(app, m_context2, "Euler Angles") {
 
 		m_context1.set_clear_color({ 0.75f, 0.75f, 0.9f });
 		m_context2.set_clear_color({ 0.75f, 0.75f, 0.9f });
@@ -30,14 +76,16 @@ namespace mini {
 		auto dock_id_bottom = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Down, 0.3f, nullptr, &dockspace_id);
 		auto dock_id_top_left = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Left, 0.5f, nullptr, &dockspace_id);
 
-		ImGui::DockBuilderDockWindow("Slerp", dockspace_id);
-		ImGui::DockBuilderDockWindow("Lerp", dock_id_top_left);
+		ImGui::DockBuilderDockWindow("Quaternion", dockspace_id);
+		ImGui::DockBuilderDockWindow("Euler Angles", dock_id_top_left);
 		ImGui::DockBuilderDockWindow("Simulation Settings", dock_id_bottom);
 	}
 
 	void slerp_scene::integrate(float delta_time) {
 		m_viewport1.update(delta_time);
 		m_viewport2.update(delta_time);
+
+		m_state.update(delta_time);
 	}
 
 	void slerp_scene::render(app_context& context) {
@@ -48,9 +96,26 @@ namespace mini {
 		}
 
 		if (m_gizmo) {
-			auto gizmo_model = glm::mat4x4(1.0f);
-			m_context1.draw(m_gizmo, gizmo_model);
-			m_context2.draw(m_gizmo, gizmo_model);
+			if (m_state.animate) {
+				auto gizmo_model1 = m_state.get_transform_q(m_state.elapsed);
+				auto gizmo_model2 = m_state.get_transform_e(m_state.elapsed);
+
+				m_context1.draw(m_gizmo, gizmo_model1);
+				m_context2.draw(m_gizmo, gizmo_model2);
+			} else {
+				auto num_frames = m_state.settings.num_frames;
+				float step = 1.0f / static_cast<float>(num_frames);
+
+				for (int i = 0; i <= num_frames; ++i) {
+					float t = glm::min(1.0f, glm::max(0.0f, i * step));
+
+					auto gizmo_model1 = m_state.get_transform_q(t);
+					auto gizmo_model2 = m_state.get_transform_e(t);
+
+					m_context1.draw(m_gizmo, gizmo_model1);
+					m_context2.draw(m_gizmo, gizmo_model2);
+				}
+			}
 		}
 
 		m_context2.display(false, true);
@@ -76,43 +141,43 @@ namespace mini {
 		std::string id_quat_w = std::format("##_{}_qw", id);
 
 		gui::prefix_label("Quaternion Input: ", 250.0f);
-		if (ImGui::Checkbox(id_checkbox.c_str(), &quat_mode)) {
-			if (quat_mode) {
-				// convert euler to quat
-				glm::quat rotation = { 1.0f, 0.0f, 0.0f, 0.0f };
+		ImGui::Checkbox(id_checkbox.c_str(), &quat_mode);
 
-				rotation = rotation * glm::angleAxis(e[2], glm::vec3{ 0.0f, 0.0f, 1.0f });
-				rotation = rotation * glm::angleAxis(e[1], glm::vec3{ 0.0f, 1.0f, 0.0f });
-				rotation = rotation * glm::angleAxis(e[0], glm::vec3{ 1.0f, 0.0f, 0.0f });
-
-				q = rotation;
-			} else {
-				// convert quat to euler
-				e = glm::eulerAngles(q);
-			}
-		}
+		bool changed = false;
 			
 		if (quat_mode) {
 			gui::prefix_label("w: ", 250.0f);
-			ImGui::InputFloat(id_quat_w.c_str(), &q.w);
+			changed = ImGui::InputFloat(id_quat_w.c_str(), &q.w) || changed;
 
 			gui::prefix_label("x: ", 250.0f);
-			ImGui::InputFloat(id_quat_x.c_str(), &q.x);
+			changed = ImGui::InputFloat(id_quat_x.c_str(), &q.x) || changed;
 
 			gui::prefix_label("y: ", 250.0f);
-			ImGui::InputFloat(id_quat_y.c_str(), &q.y);
+			changed = ImGui::InputFloat(id_quat_y.c_str(), &q.y) || changed;
 
 			gui::prefix_label("z: ", 250.0f);
-			ImGui::InputFloat(id_quat_z.c_str(), &q.z);
+			changed = ImGui::InputFloat(id_quat_z.c_str(), &q.z) || changed;
+
+			// convert quat to euler
+			e = glm::eulerAngles(q);
 		} else {
 			gui::prefix_label("x: ", 250.0f);
-			ImGui::InputFloat(id_quat_x.c_str(), &e.x);
+			changed = ImGui::InputFloat(id_quat_x.c_str(), &e.x) || changed;
 
 			gui::prefix_label("y: ", 250.0f);
-			ImGui::InputFloat(id_quat_y.c_str(), &e.y);
+			changed = ImGui::InputFloat(id_quat_y.c_str(), &e.y) || changed;
 
 			gui::prefix_label("z: ", 250.0f);
-			ImGui::InputFloat(id_quat_z.c_str(), &e.z);
+			changed = ImGui::InputFloat(id_quat_z.c_str(), &e.z) || changed;
+
+			// convert euler to quat
+			glm::quat rotation = { 1.0f, 0.0f, 0.0f, 0.0f };
+
+			rotation = rotation * glm::angleAxis(e[2], glm::vec3{ 0.0f, 0.0f, 1.0f });
+			rotation = rotation * glm::angleAxis(e[1], glm::vec3{ 0.0f, 1.0f, 0.0f });
+			rotation = rotation * glm::angleAxis(e[0], glm::vec3{ 1.0f, 0.0f, 0.0f });
+
+			q = rotation;
 		}
 	}
 
@@ -168,14 +233,17 @@ namespace mini {
 			gui::prefix_label("Frames: ", 250.0f);
 			ImGui::InputInt("##num_frames", &m_settings.num_frames, 1);
 
+			gui::prefix_label("Use Slerp: ", 250.0f);
+			ImGui::Checkbox("##use_slerp", &m_settings.slerp);
+
 			m_settings.num_frames = glm::min(10, glm::max(2, m_settings.num_frames));
 
 			if (ImGui::Button("Show Frames")) {
-				std::cout << "show animation frames" << std::endl;
+				m_state = simulation_state_t(m_settings, false);
 			}
 
 			if (ImGui::Button("Run Animation")) {
-				std::cout << "run animation" << std::endl;
+				m_state = simulation_state_t(m_settings, true);
 			}
 		}
 
