@@ -155,6 +155,7 @@
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\mathparse.cpp" />
     <ClCompile Include="src\scamera.cpp" />
+    <ClCompile Include="src\scenes\gel.cpp" />
     <ClCompile Include="src\scenes\slerp.cpp" />
     <ClCompile Include="src\scenes\spring.cpp" />
     <ClCompile Include="src\scenes\top.cpp" />
@@ -178,6 +179,7 @@
     <ClInclude Include="inc\mathparse.hpp" />
     <ClInclude Include="inc\scamera.hpp" />
     <ClInclude Include="inc\scene.hpp" />
+    <ClInclude Include="inc\scenes\gel.hpp" />
     <ClInclude Include="inc\scenes\slerp.hpp" />
     <ClInclude Include="inc\scenes\spring.hpp" />
     <ClInclude Include="inc\scenes\top.hpp" />

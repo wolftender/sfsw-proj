@@ -9,6 +9,7 @@
 #include "scenes/spring.hpp"
 #include "scenes/top.hpp"
 #include "scenes/slerp.hpp"
+#include "scenes/gel.hpp"
 	
 namespace mini {
 	application::application() : 
@@ -27,7 +28,7 @@ namespace mini {
 		m_store.load_shader("cube", "shaders/vs_shaded.glsl", "shaders/fs_shaded.glsl");
 		m_store.load_shader("gizmo", "shaders/vs_position.glsl", "shaders/fs_solidcolor.glsl");
 
-		m_scene = std::make_unique<slerp_scene>(*this);
+		m_scene = std::make_unique<gel_scene>(*this);
 	}
 
 	scene_base& application::get_scene() {
@@ -133,6 +134,11 @@ namespace mini {
 
 				if (ImGui::MenuItem("Rotation Demo", "Ctrl + Shift + F3", nullptr, true)) {
 					m_scene = std::make_unique<slerp_scene>(*this);
+					m_layout_ready = false;
+				}
+
+				if (ImGui::MenuItem("Soft Body Demo", "Ctrl + Shift + F4", nullptr, true)) {
+					m_scene = std::make_unique<gel_scene>(*this);
 					m_layout_ready = false;
 				}
 
