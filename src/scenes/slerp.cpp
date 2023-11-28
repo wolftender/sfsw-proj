@@ -85,7 +85,19 @@ namespace mini {
 	}
 
 	quaternion quat_lerp(const quaternion& q1, const quaternion& q2, float t) {
-		return normalize((q1 * (1.0f - t)) + (q2 * t));
+		auto ax = q1.x, ay = q1.y, az = q1.z, aw = q1.w;
+		auto bx = q2.x, by = q2.y, bz = q2.z, bw = q2.w;
+		auto dot = ax * bx + ay * by + az * bz + aw * bw;
+
+		dot = glm::clamp(dot, -1.0f, 1.0f);
+
+		auto z = q2;
+		if (dot < 0.0f) {
+			dot = -dot;
+			z = q2 * (-1.0f);
+		}
+
+		return normalize((q1 * (1.0f - t)) + (z * t));
 	}
 
 	quaternion quat_slerp(const quaternion& q1, const quaternion& q2, float t) {
@@ -95,12 +107,14 @@ namespace mini {
 
 		dot = glm::clamp(dot, -1.0f, 1.0f);
 
+		auto z = q2;
+		if (dot < 0.0f) {
+			dot = -dot;
+			z = q2 * (-1.0f);
+		}
+
 		//t = t * 0.5f;
 		float theta = glm::acos(dot);
-
-		if (theta < 0.0f) {
-			theta = -theta;
-		}
 
 		float st = glm::sin(theta);
 		float sut = glm::sin(t * theta);
@@ -109,10 +123,10 @@ namespace mini {
 		float c2 = sut / st;
 
 		quaternion q{
-			c1 * q1.w + c2 * q2.w,
-			c1 * q1.x + c2 * q2.x,
-			c1 * q1.y + c2 * q2.y,
-			c1 * q1.z + c2 * q2.z
+			c1 * q1.w + c2 * z.w,
+			c1 * q1.x + c2 * z.x,
+			c1 * q1.y + c2 * z.y,
+			c1 * q1.z + c2 * z.z
 		};
 
 		return normalize(q);
