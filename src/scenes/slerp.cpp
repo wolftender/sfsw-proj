@@ -93,6 +93,8 @@ namespace mini {
 		auto bx = q2.x, by = q2.y, bz = q2.z, bw = q2.w;
 		auto dot = ax * bx + ay * by + az * bz + aw * bw;
 
+		dot = glm::clamp(dot, -1.0f, 1.0f);
+
 		//t = t * 0.5f;
 		float theta = glm::acos(dot);
 
@@ -116,10 +118,28 @@ namespace mini {
 		return normalize(q);
 	}
 
+	float deg_to_rad(float deg) {
+		constexpr auto pi = glm::pi<float>();
+		return (deg / 180.0f) * pi;
+	}
+
+	float rad_to_deg(float rad) {
+		constexpr auto pi = glm::pi<float>();
+		return (rad / pi) * 180.0f;
+	}
 
 	// scene
 	slerp_scene::simulation_state_t::simulation_state_t(simulation_settings_t settings, bool animate) :
-		settings(settings), animate(animate), elapsed(0.0f) { }
+		settings(settings), animate(animate), elapsed(0.0f) { 
+		
+		this->settings.start_rotation_e[0] = deg_to_rad(this->settings.start_rotation_e[0]);
+		this->settings.start_rotation_e[1] = deg_to_rad(this->settings.start_rotation_e[1]);
+		this->settings.start_rotation_e[2] = deg_to_rad(this->settings.start_rotation_e[2]);
+
+		this->settings.end_rotation_e[0] = deg_to_rad(this->settings.end_rotation_e[0]);
+		this->settings.end_rotation_e[1] = deg_to_rad(this->settings.end_rotation_e[1]);
+		this->settings.end_rotation_e[2] = deg_to_rad(this->settings.end_rotation_e[2]);
+	}
 
 	void slerp_scene::simulation_state_t::update(float delta_time) {
 		elapsed += 0.3f * delta_time;
@@ -247,6 +267,32 @@ namespace mini {
 		}
 	}
 
+	inline void angle_clamp(glm::vec3& euler) {
+		if (euler.x > 180.0f) {
+			euler.x = -180.0f + (euler.x - floorf(euler.x / 180.0f)*180.0f);
+		}
+
+		if (euler.y > 180.0f) {
+			euler.y = -180.0f + (euler.y - floorf(euler.y / 180.0f)*180.0f);
+		}
+
+		if (euler.z > 180.0f) {
+			euler.z = -180.0f + (euler.z - floorf(euler.z / 180.0f)*180.0f);
+		}
+
+		if (euler.x < -180.0f) {
+			euler.x = 180.0f + (euler.x + floorf(fabsf(euler.x) / 180.0f)*180.0f);
+		}
+
+		if (euler.y < -180.0f) {
+			euler.y = 180.0f + (euler.y + floorf(fabsf(euler.y) / 180.0f)*180.0f);
+		}
+
+		if (euler.z < -180.0f) {
+			euler.z = 180.0f + (euler.z + floorf(fabsf(euler.z) / 180.0f)*180.0f);
+		}
+	}
+
 	inline void joint_rotation_editor(const std::string_view id, quaternion& q, glm::vec3& e, bool& quat_mode) {
 		std::string id_checkbox = std::format("##_{}_checkbox", id);
 		std::string id_quat_x = std::format("##_{}_qx", id);
@@ -273,7 +319,13 @@ namespace mini {
 			changed = ImGui::InputFloat(id_quat_z.c_str(), &q.z) || changed;
 
 			// convert quat to euler
-			e = glm::eulerAngles(glm::quat(q.w, q.x, q.y, q.z));
+			if (changed) {
+				e = glm::eulerAngles(glm::quat(q.w, q.x, q.y, q.z));
+
+				e[0] = rad_to_deg(e[0]);
+				e[1] = rad_to_deg(e[1]);
+				e[2] = rad_to_deg(e[2]);
+			}
 		} else {
 			gui::prefix_label("x: ", 250.0f);
 			changed = ImGui::InputFloat(id_quat_x.c_str(), &e.x) || changed;
@@ -285,13 +337,29 @@ namespace mini {
 			changed = ImGui::InputFloat(id_quat_z.c_str(), &e.z) || changed;
 
 			// convert euler to quat
-			quaternion rotation = { 1.0f, 0.0f, 0.0f, 0.0f };
+			if (changed) {
+				angle_clamp(e);
 
-			rotation = rotation * angle_axis(e[2], glm::vec3{ 0.0f, 0.0f, 1.0f });
-			rotation = rotation * angle_axis(e[1], glm::vec3{ 0.0f, 1.0f, 0.0f });
-			rotation = rotation * angle_axis(e[0], glm::vec3{ 1.0f, 0.0f, 0.0f });
+				quaternion rotation = { 1.0f, 0.0f, 0.0f, 0.0f };
 
-			q = rotation;
+				rotation = rotation * angle_axis(deg_to_rad(e[2]), glm::vec3{ 0.0f, 0.0f, 1.0f });
+				rotation = rotation * angle_axis(deg_to_rad(e[1]), glm::vec3{ 0.0f, 1.0f, 0.0f });
+				rotation = rotation * angle_axis(deg_to_rad(e[0]), glm::vec3{ 1.0f, 0.0f, 0.0f });
+
+				q = rotation;
+			}
+		}
+	}
+
+	inline void normalize_quaternion(quaternion& q) {
+		auto n = norm(q);
+		if (n < 0.01f) {
+			q.x = 0.0f;
+			q.y = 0.0f;
+			q.z = 0.0f;
+			q.w = 1.0f;
+		} else if (n != 1.0f) {
+			q = normalize(q);
 		}
 	}
 
@@ -353,10 +421,16 @@ namespace mini {
 			m_settings.num_frames = glm::min(10, glm::max(2, m_settings.num_frames));
 
 			if (ImGui::Button("Show Frames")) {
+				normalize_quaternion(m_settings.start_rotation_q);
+				normalize_quaternion(m_settings.end_rotation_q);
+
 				m_state = simulation_state_t(m_settings, false);
 			}
 
 			if (ImGui::Button("Run Animation")) {
+				normalize_quaternion(m_settings.start_rotation_q);
+				normalize_quaternion(m_settings.end_rotation_q);
+
 				m_state = simulation_state_t(m_settings, true);
 			}
 		}
