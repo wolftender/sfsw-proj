@@ -143,6 +143,38 @@ namespace mini {
 	}
 
 	// scene
+	inline void wrap_euler(glm::vec3& start, glm::vec3& end) {
+		float dx = end.x - start.x;
+		float dy = end.y - start.y;
+		float dz = end.z - start.z;
+
+		constexpr auto pi = glm::pi<float>();
+
+		if (abs(dx) > pi) {
+			if (start.x > 0.0f) {
+				end.x = 2.0f * pi + end.x;
+			} else {
+				end.x = -2.0f * pi + end.x;
+			}
+		}
+
+		if (abs(dy) > pi) {
+			if (start.y > 0.0f) {
+				end.y = 2.0f * pi + end.y;
+			} else {
+				end.y = -2.0f * pi + end.y;
+			}
+		}
+
+		if (abs(dz) > pi) {
+			if (start.z > 0.0f) {
+				end.z = 2.0f * pi + end.z;
+			} else {
+				end.z = -2.0f * pi + end.z;
+			}
+		}
+	}
+
 	slerp_scene::simulation_state_t::simulation_state_t(simulation_settings_t settings, bool animate) :
 		settings(settings), animate(animate), elapsed(0.0f) { 
 		
@@ -153,6 +185,8 @@ namespace mini {
 		this->settings.end_rotation_e[0] = deg_to_rad(this->settings.end_rotation_e[0]);
 		this->settings.end_rotation_e[1] = deg_to_rad(this->settings.end_rotation_e[1]);
 		this->settings.end_rotation_e[2] = deg_to_rad(this->settings.end_rotation_e[2]);
+
+		wrap_euler(this->settings.start_rotation_e, this->settings.end_rotation_e);
 	}
 
 	void slerp_scene::simulation_state_t::update(float delta_time) {
