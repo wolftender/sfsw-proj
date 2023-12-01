@@ -22,6 +22,7 @@ namespace mini {
 			void set_size (const glm::vec2 & size);
 			void set_color_tint (const glm::vec4 & color_tint);
 
+			billboard_object (std::shared_ptr<shader_program> shader);
 			billboard_object (std::shared_ptr<shader_program> shader, std::shared_ptr<texture> texture);
 			~billboard_object ();
 
@@ -29,5 +30,8 @@ namespace mini {
 			billboard_object & operator= (const billboard_object &) = delete;
 
 			virtual void render (app_context & context, const glm::mat4x4 & world_matrix) const override;
+
+		private:
+			void m_initialize();
 	};
 }

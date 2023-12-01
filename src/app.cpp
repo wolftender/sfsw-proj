@@ -27,8 +27,9 @@ namespace mini {
 		m_store.load_shader("line", "shaders/vs_basic.glsl", "shaders/fs_solidcolor.glsl", "shaders/gs_lines.glsl");
 		m_store.load_shader("cube", "shaders/vs_shaded.glsl", "shaders/fs_shaded.glsl");
 		m_store.load_shader("gizmo", "shaders/vs_position.glsl", "shaders/fs_solidcolor.glsl");
+		m_store.load_shader("point", "shaders/vs_billboard_s.glsl", "shaders/fs_point.glsl");
 
-		m_scene = std::make_unique<slerp_scene>(*this);
+		m_scene = std::make_unique<gel_scene>(*this);
 	}
 
 	scene_base& application::get_scene() {

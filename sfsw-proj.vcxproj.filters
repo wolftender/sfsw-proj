@@ -164,6 +164,7 @@
     <None Include="shaders\gs_lines.glsl" />
     <None Include="shaders\vs_shaded.glsl" />
     <None Include="shaders\fs_shaded.glsl" />
+    <None Include="shaders\fs_point.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Font Include="opensans.ttf" />

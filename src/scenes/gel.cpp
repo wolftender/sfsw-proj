@@ -44,11 +44,18 @@ namespace mini {
 		auto line_shader = get_app().get_store().get_shader("line");
 		auto cube_shader = get_app().get_store().get_shader("cube");
 		auto grid_shader = get_app().get_store().get_shader("grid_xz");
+		auto point_shader = get_app().get_store().get_shader("point");
 
 		get_app().get_context().set_clear_color({ 0.75f, 0.75f, 0.9f });
 
 		if (grid_shader) {
 			m_grid = std::make_shared<grid_object>(grid_shader);
+		}
+
+		if (point_shader) {
+			m_point_object = std::make_shared<billboard_object>(point_shader);
+			m_point_object->set_color_tint({1.0f, 0.0f, 0.0f, 1.0f});
+			m_point_object->set_size({16.0f, 16.0f});
 		}
 	}
 
@@ -69,6 +76,11 @@ namespace mini {
 		if (m_grid) {
 			auto grid_model = glm::mat4x4(1.0f);
 			context.draw(m_grid, grid_model);
+		}
+
+		if (m_point_object) {
+			auto point_model = glm::mat4x4(1.0f);
+			context.draw(m_point_object, point_model);
 		}
 	}
 

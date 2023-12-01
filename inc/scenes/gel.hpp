@@ -4,9 +4,10 @@
 
 #include <glm/glm.hpp>
 
+#include "grid.hpp"
 #include "scene.hpp"
 #include "viewport.hpp"
-#include "grid.hpp"
+#include "billboard.hpp"
 
 namespace mini {
 	class gel_scene : public scene_base {
@@ -57,6 +58,8 @@ namespace mini {
 			};
 
 			std::shared_ptr<grid_object> m_grid;
+			std::shared_ptr<billboard_object> m_point_object;
+
 			viewport_window m_viewport;
 
 		public:

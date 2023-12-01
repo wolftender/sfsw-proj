@@ -194,6 +194,7 @@
     <None Include="shaders\fs_billboard.glsl" />
     <None Include="shaders\fs_grid_xy.glsl" />
     <None Include="shaders\fs_grid_xz.glsl" />
+    <None Include="shaders\fs_point.glsl" />
     <None Include="shaders\fs_shaded.glsl" />
     <None Include="shaders\fs_solidcolor.glsl" />
     <None Include="shaders\fs_white.glsl" />
