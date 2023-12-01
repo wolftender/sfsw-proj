@@ -146,6 +146,7 @@ namespace mini {
 			auto cube_model = glm::mat4x4(1.0f);
 
 			cube_model = glm::translate(cube_model, m_frame_offset);
+			cube_model = cube_model * glm::mat4_cast(m_frame_rotation);
 			cube_model = glm::scale(cube_model, { 2.0f, 2.0f, 2.0f });
 
 			context.draw(m_cube_object, cube_model);
@@ -190,6 +191,28 @@ namespace mini {
 
 			gui::prefix_label("Offset Z: ", 250.0f);
 			ImGui::SliderFloat("##gel_frame_z", &m_frame_offset.z, -15.0f, 15.0f);
+
+			bool rotation_changed = false;
+			constexpr auto half_pi = glm::pi<float>() * 0.5f;
+
+			gui::prefix_label("Rotation X: ", 250.0f);
+			rotation_changed = ImGui::SliderFloat("##gel_frame_rx", &m_frame_euler.x, -half_pi, half_pi) || rotation_changed;
+
+			gui::prefix_label("Rotation Y: ", 250.0f);
+			rotation_changed = ImGui::SliderFloat("##gel_frame_ry", &m_frame_euler.y, -half_pi, half_pi) || rotation_changed;
+
+			gui::prefix_label("Rotation Z: ", 250.0f);
+			rotation_changed = ImGui::SliderFloat("##gel_frame_rz", &m_frame_euler.z, -half_pi, half_pi) || rotation_changed;
+
+			if (rotation_changed) {
+				glm::quat rotation = { 1.0f, 0.0f, 0.0f, 0.0f };
+
+				rotation = rotation * glm::angleAxis(m_frame_euler[2], glm::vec3{0.0f, 0.0f, 1.0f});
+				rotation = rotation * glm::angleAxis(m_frame_euler[1], glm::vec3{ 0.0f, 1.0f, 0.0f });
+				rotation = rotation * glm::angleAxis(m_frame_euler[0], glm::vec3{ 1.0f, 0.0f, 0.0f });
+
+				m_frame_rotation = rotation;
+			}
 		}
 
 		if (ImGui::CollapsingHeader("Simulation Settings", ImGuiTreeNodeFlags_DefaultOpen)) {

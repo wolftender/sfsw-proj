@@ -72,6 +72,7 @@ namespace mini {
 
 			glm::vec3 m_frame_offset;
 			glm::quat m_frame_rotation;
+			glm::vec3 m_frame_euler;
 
 		public:
 			gel_scene(application_base& app);
