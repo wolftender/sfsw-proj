@@ -13,7 +13,7 @@ namespace mini {
 	}
 
 	void gel_scene::simulation_state_t::integrate(float delta_time) {
-
+		
 	}
 
 	void gel_scene::simulation_state_t::reset(const simulation_settings_t& settings) {
@@ -38,6 +38,7 @@ namespace mini {
 			}
 		}
 
+		active_springs.clear();
 		springs.clear();
 		springs.resize(64*64);
 
@@ -60,6 +61,8 @@ namespace mini {
 							springs[i*64 + j].length = dist;
 							springs[i*64 + j].enabled = true;
 							springs[j*64 + i] = springs[i*64 + j];
+
+							active_springs.push_back(i*64+j);
 						}
 					}
 				}
@@ -70,7 +73,9 @@ namespace mini {
 	gel_scene::gel_scene(application_base& app) : 
 		scene_base(app),
 		m_state(m_settings),
-		m_viewport(app, "Soft Body") {
+		m_viewport(app, "Soft Body"),
+		m_frame_offset{0.0f, 0.0f, 0.0f},
+		m_frame_rotation{1.0f, 0.0f, 0.0f, 0.0f} {
 
 		auto line_shader = get_app().get_store().get_shader("line");
 		auto cube_shader = get_app().get_store().get_shader("cube");
@@ -87,6 +92,8 @@ namespace mini {
 			m_springs_object = std::make_shared<segments_array>(line_shader, 64);
 			m_springs_object->set_color({0.0f, 0.0f, 0.0f, 1.0f});
 			m_reset_spring_array();
+
+			m_build_cube_object(line_shader);
 		}
 
 		if (point_shader) {
@@ -134,6 +141,15 @@ namespace mini {
 				context.draw(m_point_object, model_matrix);
 			}
 		}
+
+		if (m_cube_object) {
+			auto cube_model = glm::mat4x4(1.0f);
+
+			cube_model = glm::translate(cube_model, m_frame_offset);
+			cube_model = glm::scale(cube_model, { 2.0f, 2.0f, 2.0f });
+
+			context.draw(m_cube_object, cube_model);
+		}
 	}
 
 	void gel_scene::gui() {
@@ -165,8 +181,73 @@ namespace mini {
 
 		m_viewport.configure();
 
+		if (ImGui::CollapsingHeader("Frame Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
+			gui::prefix_label("Offset X: ", 250.0f);
+			ImGui::SliderFloat("##gel_frame_x", &m_frame_offset.x, -15.0f, 15.0f);
+
+			gui::prefix_label("Offset Y: ", 250.0f);
+			ImGui::SliderFloat("##gel_frame_y", &m_frame_offset.y, -15.0f, 15.0f);
+
+			gui::prefix_label("Offset Z: ", 250.0f);
+			ImGui::SliderFloat("##gel_frame_z", &m_frame_offset.z, -15.0f, 15.0f);
+		}
+
+		if (ImGui::CollapsingHeader("Simulation Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
+			gui::prefix_label("Gravity Enabled: ", 250.0f);
+			ImGui::Checkbox("##gel_gravity_on", &m_settings.enable_gravity);
+
+			gui::prefix_label("Gravity Force: ", 250.0f);
+			ImGui::InputFloat("##gel_gravity_f", &m_settings.gravity);
+
+			gui::prefix_label("Spring Length: ", 250.0f);
+			ImGui::InputFloat("##gel_spring_len", &m_settings.spring_length);
+
+			gui::prefix_label("Spring Friction: ", 250.0f);
+			ImGui::InputFloat("##gel_spring_frict", &m_settings.spring_friction);
+
+			gui::prefix_label("Spring Coefficient: ", 250.0f);
+			ImGui::InputFloat("##gel_spring_coeff", &m_settings.spring_coefficient);
+
+			gui::prefix_label("Int. Step: ", 250.0f);
+			ImGui::InputFloat("##gel_int_step", &m_settings.integration_step);
+
+			if (ImGui::Button("Apply")) {
+				m_state.reset(m_settings);
+			}
+		}
+
 		ImGui::End();
 		ImGui::PopStyleVar(1);
+	}
+
+	void gel_scene::m_build_cube_object(std::shared_ptr<shader_program> line_shader) {
+		m_cube_object = std::make_shared<segments_array>(line_shader, 8);
+
+		m_cube_object->update_point(0, { -1.0f, -1.0f,  1.0f });
+		m_cube_object->update_point(1, { -1.0f, -1.0f, -1.0f });
+		m_cube_object->update_point(2, { -1.0f,  1.0f,  1.0f });
+		m_cube_object->update_point(3, { -1.0f,  1.0f, -1.0f });
+		m_cube_object->update_point(4, {  1.0f, -1.0f,  1.0f });
+		m_cube_object->update_point(5, {  1.0f, -1.0f, -1.0f });
+		m_cube_object->update_point(6, {  1.0f,  1.0f,  1.0f });
+		m_cube_object->update_point(7, {  1.0f,  1.0f, -1.0f });
+
+		m_cube_object->add_segment(0, 1);
+		m_cube_object->add_segment(1, 3);
+		m_cube_object->add_segment(3, 2);
+		m_cube_object->add_segment(2, 0);
+
+		m_cube_object->add_segment(4, 5);
+		m_cube_object->add_segment(5, 7);
+		m_cube_object->add_segment(7, 6);
+		m_cube_object->add_segment(6, 4);
+
+		m_cube_object->add_segment(0, 4);
+		m_cube_object->add_segment(1, 5);
+		m_cube_object->add_segment(2, 6);
+		m_cube_object->add_segment(3, 7);
+
+		m_cube_object->rebuild_buffers();
 	}
 
 	void gel_scene::m_reset_spring_array() {

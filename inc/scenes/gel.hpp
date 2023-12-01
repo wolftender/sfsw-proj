@@ -3,6 +3,7 @@
 #include <memory>
 
 #include <glm/glm.hpp>
+#include <glm/gtc/quaternion.hpp>
 
 #include "grid.hpp"
 #include "scene.hpp"
@@ -20,14 +21,16 @@ namespace mini {
 				float spring_friction;
 				float spring_coefficient;
 				float integration_step;
+				bool enable_gravity;
 
 				simulation_settings_t() :
-					gravity(0.98f),
+					gravity(9.807f),
 					mass(1.0f),
 					spring_length(1.0f),
 					spring_friction(0.1f),
 					spring_coefficient(1.0f),
-					integration_step(0.001f) { }
+					integration_step(0.001f),
+					enable_gravity(false) { }
 			};
 
 			struct point_mass_t {
@@ -46,6 +49,7 @@ namespace mini {
 			struct simulation_state_t {
 				std::vector<point_mass_t> point_masses;
 				std::vector<spring_t> springs;
+				std::vector<std::size_t> active_springs;
 
 				simulation_settings_t settings;
 				float time;
@@ -62,8 +66,12 @@ namespace mini {
 			std::shared_ptr<grid_object> m_grid;
 			std::shared_ptr<billboard_object> m_point_object;
 			std::shared_ptr<segments_array> m_springs_object;
+			std::shared_ptr<segments_array> m_cube_object;
 
 			viewport_window m_viewport;
+
+			glm::vec3 m_frame_offset;
+			glm::quat m_frame_rotation;
 
 		public:
 			gel_scene(application_base& app);
@@ -84,6 +92,7 @@ namespace mini {
 			void m_gui_viewport();
 			void m_gui_settings();
 
+			void m_build_cube_object(std::shared_ptr<shader_program> line_shader);
 			void m_reset_spring_array();
 	};
 }
