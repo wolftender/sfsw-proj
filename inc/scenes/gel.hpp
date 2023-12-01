@@ -8,6 +8,7 @@
 #include "scene.hpp"
 #include "viewport.hpp"
 #include "billboard.hpp"
+#include "segments.hpp"
 
 namespace mini {
 	class gel_scene : public scene_base {
@@ -34,31 +35,33 @@ namespace mini {
 				glm::vec3 dx;
 				glm::vec3 ddx;
 
-				const simulation_settings_t& settings;
-				std::vector<point_mass_t*> springs;
+				point_mass_t(const glm::vec3& x);
+			};
 
-				point_mass_t(const simulation_settings_t& settings, const glm::vec3& x);
-
-				point_mass_t(const point_mass_t&) = delete;
-				point_mass_t& operator=(const point_mass_t&) = delete;
+			struct spring_t {
+				float length;
+				bool enabled;
 			};
 
 			struct simulation_state_t {
-				std::vector<std::unique_ptr<point_mass_t>> point_masses;
+				std::vector<point_mass_t> point_masses;
+				std::vector<spring_t> springs;
+
 				simulation_settings_t settings;
-				float m_time;
+				float time;
 
 				simulation_state_t(const simulation_settings_t& settings);
 
 				void integrate(float delta_time);
 				void reset(const simulation_settings_t& settings);
-
-				simulation_state_t(const simulation_state_t&) = delete;
-				simulation_state_t& operator=(const simulation_state_t&) = delete;
 			};
+
+			simulation_settings_t m_settings;
+			simulation_state_t m_state;
 
 			std::shared_ptr<grid_object> m_grid;
 			std::shared_ptr<billboard_object> m_point_object;
+			std::shared_ptr<segments_array> m_springs_object;
 
 			viewport_window m_viewport;
 
@@ -80,5 +83,7 @@ namespace mini {
 		private:
 			void m_gui_viewport();
 			void m_gui_settings();
+
+			void m_reset_spring_array();
 	};
 }
