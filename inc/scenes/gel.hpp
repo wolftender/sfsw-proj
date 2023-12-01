@@ -21,6 +21,7 @@ namespace mini {
 				float spring_friction;
 				float spring_coefficient;
 				float integration_step;
+				float frame_length;
 				bool enable_gravity;
 
 				simulation_settings_t() :
@@ -30,6 +31,7 @@ namespace mini {
 					spring_friction(0.1f),
 					spring_coefficient(1.0f),
 					integration_step(0.001f),
+					frame_length(4.0f),
 					enable_gravity(false) { }
 			};
 
@@ -48,8 +50,12 @@ namespace mini {
 
 			struct simulation_state_t {
 				std::vector<point_mass_t> point_masses;
+				std::vector<glm::vec3> force_sums;
 				std::vector<spring_t> springs;
 				std::vector<std::size_t> active_springs;
+
+				glm::vec3 frame_offset;
+				glm::quat frame_rotation;
 
 				simulation_settings_t settings;
 				float time;
@@ -69,9 +75,6 @@ namespace mini {
 			std::shared_ptr<segments_array> m_cube_object;
 
 			viewport_window m_viewport;
-
-			glm::vec3 m_frame_offset;
-			glm::quat m_frame_rotation;
 			glm::vec3 m_frame_euler;
 
 		public:

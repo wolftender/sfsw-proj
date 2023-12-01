@@ -13,14 +13,53 @@ namespace mini {
 	}
 
 	void gel_scene::simulation_state_t::integrate(float delta_time) {
-		
+		for (auto& sum : force_sums) {
+			sum = { 0.0f, 0.0f, 0.0f };
+		}
+
+		// calculate forces working on all the point masses
+		for (const auto& spring_id : active_springs) {
+			const auto i = spring_id % 64;
+			const auto j = spring_id / 64;
+
+			auto& m1 = point_masses[i];
+			auto& m2 = point_masses[j];
+
+			glm::vec3 d12 = m1.x - m2.x;
+			glm::vec3 d21 = -d12;
+
+			float l = springs[spring_id].length;
+			float c = settings.spring_coefficient;
+
+			float dn = glm::length(d12);
+			float magnitude = c * (dn - l) / dn;
+			
+			auto f12 = magnitude * d12;
+			auto f21 = magnitude * d21;
+
+			force_sums[i] += f12;
+			force_sums[j] += f21;
+		}
+
+		// calculate newton equation for all point masses
+		for (std::size_t mass_id = 0; mass_id < 64; ++mass_id) {
+			auto& mass = point_masses[mass_id];
+			auto& force_sum = force_sums[mass_id];
+
+
+		}
 	}
 
 	void gel_scene::simulation_state_t::reset(const simulation_settings_t& settings) {
 		this->settings = settings;
 
+		frame_offset = { 0.0f, 0.0f, 0.0f };
+		frame_rotation = { 1.0f, 0.0f, 0.0f, 0.0f };
+
 		point_masses.clear();
 		point_masses.reserve(64);
+
+		force_sums.resize(64);
 
 		float dim = settings.spring_length * 3.0f;
 		float step = settings.spring_length;
@@ -74,8 +113,7 @@ namespace mini {
 		scene_base(app),
 		m_state(m_settings),
 		m_viewport(app, "Soft Body"),
-		m_frame_offset{0.0f, 0.0f, 0.0f},
-		m_frame_rotation{1.0f, 0.0f, 0.0f, 0.0f} {
+		m_frame_euler{0.0f, 0.0f, 0.0f} {
 
 		auto line_shader = get_app().get_store().get_shader("line");
 		auto cube_shader = get_app().get_store().get_shader("cube");
@@ -114,7 +152,9 @@ namespace mini {
 
 	void gel_scene::integrate(float delta_time) {
 		m_viewport.update(delta_time);
+		m_state.integrate(delta_time);
 		
+		// update point positions on the gpu
 		for (std::size_t index = 0; index < m_state.point_masses.size(); ++index) {
 			m_springs_object->update_point(index, m_state.point_masses[index].x);
 		}
@@ -144,10 +184,11 @@ namespace mini {
 
 		if (m_cube_object) {
 			auto cube_model = glm::mat4x4(1.0f);
+			float s = 0.5f * m_state.settings.frame_length;
 
-			cube_model = glm::translate(cube_model, m_frame_offset);
-			cube_model = cube_model * glm::mat4_cast(m_frame_rotation);
-			cube_model = glm::scale(cube_model, { 2.0f, 2.0f, 2.0f });
+			cube_model = glm::translate(cube_model, m_state.frame_offset);
+			cube_model = cube_model * glm::mat4_cast(m_state.frame_rotation);
+			cube_model = glm::scale(cube_model, { s, s, s });
 
 			context.draw(m_cube_object, cube_model);
 		}
@@ -184,13 +225,13 @@ namespace mini {
 
 		if (ImGui::CollapsingHeader("Frame Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
 			gui::prefix_label("Offset X: ", 250.0f);
-			ImGui::SliderFloat("##gel_frame_x", &m_frame_offset.x, -15.0f, 15.0f);
+			ImGui::SliderFloat("##gel_frame_x", &m_state.frame_offset.x, -15.0f, 15.0f);
 
 			gui::prefix_label("Offset Y: ", 250.0f);
-			ImGui::SliderFloat("##gel_frame_y", &m_frame_offset.y, -15.0f, 15.0f);
+			ImGui::SliderFloat("##gel_frame_y", &m_state.frame_offset.y, -15.0f, 15.0f);
 
 			gui::prefix_label("Offset Z: ", 250.0f);
-			ImGui::SliderFloat("##gel_frame_z", &m_frame_offset.z, -15.0f, 15.0f);
+			ImGui::SliderFloat("##gel_frame_z", &m_state.frame_offset.z, -15.0f, 15.0f);
 
 			bool rotation_changed = false;
 			constexpr auto half_pi = glm::pi<float>() * 0.5f;
@@ -211,7 +252,7 @@ namespace mini {
 				rotation = rotation * glm::angleAxis(m_frame_euler[1], glm::vec3{ 0.0f, 1.0f, 0.0f });
 				rotation = rotation * glm::angleAxis(m_frame_euler[0], glm::vec3{ 1.0f, 0.0f, 0.0f });
 
-				m_frame_rotation = rotation;
+				m_state.frame_rotation = rotation;
 			}
 		}
 
@@ -230,6 +271,9 @@ namespace mini {
 
 			gui::prefix_label("Spring Coefficient: ", 250.0f);
 			ImGui::InputFloat("##gel_spring_coeff", &m_settings.spring_coefficient);
+
+			gui::prefix_label("Frame Size: ", 250.0f);
+			ImGui::InputFloat("##gel_frame_size", &m_settings.frame_length);
 
 			gui::prefix_label("Int. Step: ", 250.0f);
 			ImGui::InputFloat("##gel_int_step", &m_settings.integration_step);
