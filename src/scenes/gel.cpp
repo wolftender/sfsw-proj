@@ -280,6 +280,7 @@ namespace mini {
 
 			if (ImGui::Button("Apply")) {
 				m_state.reset(m_settings);
+				m_reset_spring_array();
 			}
 		}
 
