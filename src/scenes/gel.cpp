@@ -20,80 +20,41 @@ namespace mini {
 	gel_scene::point_mass_t::point_mass_t(const glm::vec3& x) :
 		x(x), dx{0.0f, 0.0f, 0.0f}, ddx{0.0f, 0.0f, 0.0f} {}
 
+	////// EULER METHOD //////
+
+	gel_scene::euler_solver_t::euler_solver_t(std::size_t num_masses) {
+		force_sums.resize(num_masses);
+	}
+
+	void gel_scene::euler_solver_t::solve(simulation_state_t& state, float step) {
+		state.calculate_force_sums(force_sums);
+
+		for (std::size_t mass_id = 0; mass_id < 64; ++mass_id) {
+			auto& mass = state.point_masses[mass_id];
+			auto& force_sum = force_sums[mass_id];
+
+			mass.x = mass.x + step * mass.dx;
+			mass.dx = mass.dx + step * mass.ddx;
+			mass.ddx = state.mass_inv * (force_sum - mass.dx * state.settings.spring_friction);
+		}
+	}
+
+	//////////////////////////
+	//////// RK METHOD ///////
+
+	gel_scene::runge_kutta_solver_t::runge_kutta_solver_t(std::size_t num_masses) {
+		throw std::runtime_error("not implemented");
+	}
+
+	void gel_scene::runge_kutta_solver_t::solve(simulation_state_t& state, float step) {
+		throw std::runtime_error("not implemented");
+	}
+
 	gel_scene::simulation_state_t::simulation_state_t(const simulation_settings_t& settings) {
 		reset(settings);
 	}
 
 	void gel_scene::simulation_state_t::integrate(float delta_time) {
-		const auto claculate_force_sum = [&]() {
-			for (auto& sum : force_sums) {
-				sum = { 0.0f, 0.0f, 0.0f };
-			}
-
-			// calculate forces working on all the point masses
-			for (const auto& spring_id : active_springs) {
-				const auto i = spring_id % 64;
-				const auto j = spring_id / 64;
-
-				auto& m1 = point_masses[i];
-				auto& m2 = point_masses[j];
-
-				glm::vec3 d12 = m1.x - m2.x;
-				glm::vec3 d21 = -d12;
-
-				float l = springs[spring_id].length;
-				float c = settings.spring_coefficient;
-
-				float dn = glm::length(d12);
-				float magnitude = c * (dn - l) / (dn + 0.0001f);
-
-				auto f12 = magnitude * d12;
-				auto f21 = magnitude * d21;
-
-				force_sums[i] += f21;
-				force_sums[j] += f12;
-			}
-
-			auto cube_model = glm::mat4x4(1.0f);
-			float s = 0.5f * settings.frame_length;
-
-			cube_model = glm::translate(cube_model, frame_offset);
-			cube_model = cube_model * glm::mat4_cast(frame_rotation);
-			cube_model = glm::scale(cube_model, { s, s, s });
-
-			for (int x = 0; x <= 1; ++x) {
-				for (int y = 0; y <= 1; ++y) {
-					for (int z = 0; z <= 1; ++z) {
-						glm::vec3 frame_point = cube_model * glm::vec4{
-							-1.0f + x * 2.0f,
-							-1.0f + y * 2.0f,
-							-1.0f + z * 2.0f, 1.0f
-						};
-
-						int mx = x * 3;
-						int my = y * 3;
-						int mz = z * 3;
-						int mass_id = (mx * 16) + (my * 4) + mz;
-
-						auto& mass = point_masses[mass_id];
-						float l = frame_spring_len;
-						float c = settings.frame_coefficient;
-						glm::vec3 d = frame_point - mass.x;
-						float dn = glm::length(d);
-						float magnitude = c * (dn - l) / (dn + 0.0001f);
-
-						force_sums[mass_id] += magnitude * d;
-					}
-				}
-			}
-
-			if (settings.enable_gravity) {
-				for (auto& sum : force_sums) {
-					sum += glm::vec3{ 0.0f, settings.mass * settings.gravity, 0.0f };
-				}
-			}
-		};
-
 		// window was dragged probably
 		if (delta_time > 0.1f) {
 			delta_time = 0.1f;
@@ -103,18 +64,9 @@ namespace mini {
 		step_timer += delta_time;
 
 		while (step_timer > settings.integration_step) {
-			const float h = settings.integration_step;
+			const float step = settings.integration_step;
 
-			claculate_force_sum();
-
-			for (std::size_t mass_id = 0; mass_id < 64; ++mass_id) {
-				auto& mass = point_masses[mass_id];
-				auto& force_sum = force_sums[mass_id];
-
-				mass.x = mass.x + h * mass.dx;
-				mass.dx = mass.dx + h * mass.ddx;
-				mass.ddx = mass_inv * (force_sum - mass.dx * settings.spring_friction);
-			}
+			solver->solve(*this, step);
 
 			t0 = t0 + settings.integration_step;
 			step_timer -= settings.integration_step;
@@ -134,10 +86,14 @@ namespace mini {
 		frame_offset = { 0.0f, 0.0f, 0.0f };
 		frame_rotation = { 1.0f, 0.0f, 0.0f, 0.0f };
 
+		if (settings.solver_type == solver_type_t::euler) {
+			solver = std::make_unique<euler_solver_t>(64);
+		} else {
+			solver = std::make_unique<runge_kutta_solver_t>(64);
+		}
+
 		point_masses.clear();
 		point_masses.reserve(64);
-
-		force_sums.resize(64);
 
 		float dim = settings.spring_length * 3.0f;
 		float step = settings.spring_length;
@@ -193,11 +149,87 @@ namespace mini {
 		}
 	}
 
+	void gel_scene::simulation_state_t::calculate_force_sums(std::vector<glm::vec3>& force_sums) const {
+		for (auto& sum : force_sums) {
+			sum = { 0.0f, 0.0f, 0.0f };
+		}
+
+		// calculate forces working on all the point masses
+		for (const auto& spring_id : active_springs) {
+			const auto i = spring_id % 64;
+			const auto j = spring_id / 64;
+
+			auto& m1 = point_masses[i];
+			auto& m2 = point_masses[j];
+
+			glm::vec3 d12 = m1.x - m2.x;
+			glm::vec3 d21 = -d12;
+
+			float l = springs[spring_id].length;
+			float c = settings.spring_coefficient;
+
+			float dn = glm::length(d12);
+			float magnitude = c * (dn - l) / (dn + 0.0001f);
+
+			auto f12 = magnitude * d12;
+			auto f21 = magnitude * d21;
+
+			force_sums[i] += f21;
+			force_sums[j] += f12;
+		}
+
+		// calculate forces working on edges
+		auto cube_model = glm::mat4x4(1.0f);
+		float s = 0.5f * settings.frame_length;
+
+		cube_model = glm::translate(cube_model, frame_offset);
+		cube_model = cube_model * glm::mat4_cast(frame_rotation);
+		cube_model = glm::scale(cube_model, { s, s, s });
+
+		for (int x = 0; x <= 1; ++x) {
+			for (int y = 0; y <= 1; ++y) {
+				for (int z = 0; z <= 1; ++z) {
+					glm::vec3 frame_point = cube_model * glm::vec4{
+						-1.0f + x * 2.0f,
+						-1.0f + y * 2.0f,
+						-1.0f + z * 2.0f, 1.0f
+					};
+
+					int mx = x * 3;
+					int my = y * 3;
+					int mz = z * 3;
+					int mass_id = (mx * 16) + (my * 4) + mz;
+
+					auto& mass = point_masses[mass_id];
+					float l = frame_spring_len;
+					float c = settings.frame_coefficient;
+					glm::vec3 d = frame_point - mass.x;
+					float dn = glm::length(d);
+					float magnitude = c * (dn - l) / (dn + 0.0001f);
+
+					force_sums[mass_id] += magnitude * d;
+				}
+			}
+		}
+
+		// calculate gravity forces
+		if (settings.enable_gravity) {
+			for (auto& sum : force_sums) {
+				sum += glm::vec3{ 0.0f, settings.mass * settings.gravity, 0.0f };
+			}
+		}
+	}
+
 	gel_scene::gel_scene(application_base& app) : 
 		scene_base(app),
 		m_state(m_settings),
 		m_viewport(app, "Soft Body"),
-		m_frame_euler{0.0f, 0.0f, 0.0f} {
+		m_frame_euler{0.0f, 0.0f, 0.0f},
+		m_solver_method_id(0),
+		m_show_springs(true),
+		m_show_points(true), 
+		m_show_bezier(true),
+		m_show_deform(true) {
 
 		auto line_shader = get_app().get_store().get_shader("line");
 		auto cube_shader = get_app().get_store().get_shader("cube");
@@ -250,14 +282,14 @@ namespace mini {
 			context.draw(m_grid, grid_model);
 		}
 
-		if (m_springs_object) {
+		if (m_springs_object && m_show_springs) {
 			auto springs_model = glm::mat4x4(1.0f);
 
 			m_springs_object->rebuild_buffers();
 			context.draw(m_springs_object, springs_model);
 		}
 
-		if (m_point_object) {
+		if (m_point_object && m_show_points) {
 			for (const auto& point : m_state.point_masses) {
 				auto position = point.x;
 				auto model_matrix = glm::translate(glm::mat4x4(1.0f), position);
@@ -340,6 +372,20 @@ namespace mini {
 			}
 		}
 
+		if (ImGui::CollapsingHeader("Display Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
+			gui::prefix_label("Show Masses: ", 250.0f);
+			ImGui::Checkbox("##gel_show_points", &m_show_points);
+
+			gui::prefix_label("Show Springs: ", 250.0f);
+			ImGui::Checkbox("##gel_show_springs", &m_show_springs);
+
+			gui::prefix_label("Show Gel Cube: ", 250.0f);
+			ImGui::Checkbox("##gel_show_bezier", &m_show_bezier);
+
+			gui::prefix_label("Show Model: ", 250.0f);
+			ImGui::Checkbox("##gel_show_deform", &m_show_deform);
+		}
+
 		if (ImGui::CollapsingHeader("Simulation Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
 			gui::prefix_label("Gravity Enabled: ", 250.0f);
 			ImGui::Checkbox("##gel_gravity_on", &m_settings.enable_gravity);
@@ -368,7 +414,20 @@ namespace mini {
 			gui::prefix_label("Int. Step: ", 250.0f);
 			ImGui::InputFloat("##gel_int_step", &m_settings.integration_step);
 
-			if (ImGui::Button("Apply")) {
+			constexpr const char* solver_types[] = {"Euler Method", "Runge-Kutta Method"};
+			gui::prefix_label("Solver Type:", 250.0f);
+
+			if (ImGui::Combo("##gel_solver", &m_solver_method_id, solver_types, 2)) {
+				solver_type_t new_mode;
+				switch (m_solver_method_id) {
+					case 0: new_mode = solver_type_t::euler; break;
+					case 1: new_mode = solver_type_t::runge_kutta; break;
+				}
+
+				m_settings.solver_type = new_mode;
+			}
+
+			if (ImGui::Button("Apply Settings")) {
 				m_state.reset(m_settings);
 				m_reset_spring_array();
 			}

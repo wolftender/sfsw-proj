@@ -14,6 +14,34 @@
 namespace mini {
 	class gel_scene : public scene_base {
 		private:
+			enum class solver_type_t {
+				euler,
+				runge_kutta
+			};
+
+			struct simulation_state_t;
+			struct differential_solver_t {
+				virtual void solve(simulation_state_t& state, float step) = 0;
+			};
+
+			struct euler_solver_t : public differential_solver_t {
+				std::vector<glm::vec3> force_sums;
+
+				euler_solver_t(std::size_t num_masses);
+				euler_solver_t(const euler_solver_t&) = delete;
+				euler_solver_t& operator=(const euler_solver_t&) = delete;
+
+				void solve(simulation_state_t& state, float step) override;
+			};
+
+			struct runge_kutta_solver_t : public differential_solver_t {
+				runge_kutta_solver_t(std::size_t num_masses);
+				runge_kutta_solver_t(const runge_kutta_solver_t&) = delete;
+				runge_kutta_solver_t& operator=(const runge_kutta_solver_t&) = delete;
+
+				void solve(simulation_state_t& state, float step) override;
+			};
+
 			struct simulation_settings_t {
 				float gravity;
 				float mass;
@@ -23,6 +51,8 @@ namespace mini {
 				float frame_coefficient;
 				float integration_step;
 				float frame_length;
+
+				solver_type_t solver_type;
 				bool enable_gravity;
 
 				simulation_settings_t() :
@@ -34,6 +64,7 @@ namespace mini {
 					frame_coefficient(2.0f),
 					integration_step(0.017f),
 					frame_length(3.2f),
+					solver_type(solver_type_t::euler),
 					enable_gravity(false) { }
 			};
 
@@ -54,9 +85,7 @@ namespace mini {
 				std::vector<point_mass_t> point_masses;
 				std::vector<spring_t> springs;
 				std::vector<std::size_t> active_springs;
-
-				// data for integration methods
-				std::vector<glm::vec3> force_sums;
+				std::unique_ptr<differential_solver_t> solver;
 
 				glm::vec3 frame_offset;
 				glm::quat frame_rotation;
@@ -70,6 +99,7 @@ namespace mini {
 
 				void integrate(float delta_time);
 				void reset(const simulation_settings_t& settings);
+				void calculate_force_sums(std::vector<glm::vec3>& force_sums) const;
 			};
 
 			simulation_settings_t m_settings;
@@ -82,6 +112,13 @@ namespace mini {
 
 			viewport_window m_viewport;
 			glm::vec3 m_frame_euler;
+
+			int m_solver_method_id;
+
+			bool m_show_springs;
+			bool m_show_points;
+			bool m_show_bezier;
+			bool m_show_deform;
 
 		public:
 			gel_scene(application_base& app);
