@@ -52,15 +52,17 @@ namespace mini {
 
 			struct simulation_state_t {
 				std::vector<point_mass_t> point_masses;
-				std::vector<glm::vec3> force_sums;
 				std::vector<spring_t> springs;
 				std::vector<std::size_t> active_springs;
+
+				// data for integration methods
+				std::vector<glm::vec3> force_sums;
 
 				glm::vec3 frame_offset;
 				glm::quat frame_rotation;
 
 				simulation_settings_t settings;
-				float time;
+				float time, step_timer;
 				float mass_inv;
 				float frame_spring_len;
 

@@ -25,88 +25,109 @@ namespace mini {
 	}
 
 	void gel_scene::simulation_state_t::integrate(float delta_time) {
-		for (auto& sum : force_sums) {
-			sum = { 0.0f, 0.0f, 0.0f };
-		}
+		const auto claculate_force_sum = [&]() {
+			for (auto& sum : force_sums) {
+				sum = { 0.0f, 0.0f, 0.0f };
+			}
 
-		// calculate forces working on all the point masses
-		for (const auto& spring_id : active_springs) {
-			const auto i = spring_id % 64;
-			const auto j = spring_id / 64;
+			// calculate forces working on all the point masses
+			for (const auto& spring_id : active_springs) {
+				const auto i = spring_id % 64;
+				const auto j = spring_id / 64;
 
-			auto& m1 = point_masses[i];
-			auto& m2 = point_masses[j];
+				auto& m1 = point_masses[i];
+				auto& m2 = point_masses[j];
 
-			glm::vec3 d12 = m1.x - m2.x;
-			glm::vec3 d21 = -d12;
+				glm::vec3 d12 = m1.x - m2.x;
+				glm::vec3 d21 = -d12;
 
-			float l = springs[spring_id].length;
-			float c = settings.spring_coefficient;
+				float l = springs[spring_id].length;
+				float c = settings.spring_coefficient;
 
-			float dn = glm::length(d12);
-			float magnitude = c * (dn - l) / (dn + 0.0001f);
-			
-			auto f12 = magnitude * d12;
-			auto f21 = magnitude * d21;
+				float dn = glm::length(d12);
+				float magnitude = c * (dn - l) / (dn + 0.0001f);
 
-			force_sums[i] += f21;
-			force_sums[j] += f12;
-		}
+				auto f12 = magnitude * d12;
+				auto f21 = magnitude * d21;
 
-		auto cube_model = glm::mat4x4(1.0f);
-		float s = 0.5f * settings.frame_length;
+				force_sums[i] += f21;
+				force_sums[j] += f12;
+			}
 
-		cube_model = glm::translate(cube_model, frame_offset);
-		cube_model = cube_model * glm::mat4_cast(frame_rotation);
-		cube_model = glm::scale(cube_model, { s, s, s });
+			auto cube_model = glm::mat4x4(1.0f);
+			float s = 0.5f * settings.frame_length;
 
-		for (int x = 0; x <= 1; ++x) {
-			for (int y = 0; y <= 1; ++y) {
-				for (int z = 0; z <= 1; ++z) {
-					glm::vec3 frame_point = cube_model * glm::vec4{
-						-1.0f + x * 2.0f,
-						-1.0f + y * 2.0f,
-						-1.0f + z * 2.0f, 1.0f
-					};
+			cube_model = glm::translate(cube_model, frame_offset);
+			cube_model = cube_model * glm::mat4_cast(frame_rotation);
+			cube_model = glm::scale(cube_model, { s, s, s });
 
-					int mx = x * 3;
-					int my = y * 3;
-					int mz = z * 3;
-					int mass_id = (mx * 16) + (my * 4) + mz;
+			for (int x = 0; x <= 1; ++x) {
+				for (int y = 0; y <= 1; ++y) {
+					for (int z = 0; z <= 1; ++z) {
+						glm::vec3 frame_point = cube_model * glm::vec4{
+							-1.0f + x * 2.0f,
+							-1.0f + y * 2.0f,
+							-1.0f + z * 2.0f, 1.0f
+						};
 
-					auto& mass = point_masses[mass_id];
-					float l = frame_spring_len;
-					float c = settings.frame_coefficient;
-					glm::vec3 d = frame_point - mass.x;
-					float dn = glm::length(d);
-					float magnitude = c * (dn - l) / (dn + 0.0001f);
+						int mx = x * 3;
+						int my = y * 3;
+						int mz = z * 3;
+						int mass_id = (mx * 16) + (my * 4) + mz;
 
-					force_sums[mass_id] += magnitude * d;
+						auto& mass = point_masses[mass_id];
+						float l = frame_spring_len;
+						float c = settings.frame_coefficient;
+						glm::vec3 d = frame_point - mass.x;
+						float dn = glm::length(d);
+						float magnitude = c * (dn - l) / (dn + 0.0001f);
+
+						force_sums[mass_id] += magnitude * d;
+					}
 				}
 			}
-		}
 
-		if (settings.enable_gravity) {
-			for (auto& sum : force_sums) {
-				sum += glm::vec3{0.0f, settings.mass * settings.gravity, 0.0f};
+			if (settings.enable_gravity) {
+				for (auto& sum : force_sums) {
+					sum += glm::vec3{ 0.0f, settings.mass * settings.gravity, 0.0f };
+				}
 			}
+		};
+
+		// window was dragged probably
+		if (delta_time > 0.1f) {
+			delta_time = 0.1f;
 		}
 
-		const float step = settings.integration_step;
+		float t0 = time;
+		step_timer += delta_time;
 
-		// calculate newton equation for all point masses
-		for (std::size_t mass_id = 0; mass_id < 64; ++mass_id) {
-			auto& mass = point_masses[mass_id];
-			auto& force_sum = force_sums[mass_id];
+		while (step_timer > settings.integration_step) {
+			const float h = settings.integration_step;
 
-			mass.x = mass.x + step * mass.dx;
-			mass.dx = mass.dx + step * mass.ddx;
-			mass.ddx = mass_inv * (force_sum - mass.dx * settings.spring_friction);
+			claculate_force_sum();
+
+			for (std::size_t mass_id = 0; mass_id < 64; ++mass_id) {
+				auto& mass = point_masses[mass_id];
+				auto& force_sum = force_sums[mass_id];
+
+				mass.x = mass.x + h * mass.dx;
+				mass.dx = mass.dx + h * mass.ddx;
+				mass.ddx = mass_inv * (force_sum - mass.dx * settings.spring_friction);
+			}
+
+			t0 = t0 + settings.integration_step;
+			step_timer -= settings.integration_step;
 		}
+
+		time = t0;
 	}
 
 	void gel_scene::simulation_state_t::reset(const simulation_settings_t& settings) {
 		this->settings = settings;
+
+		time = 0.0f;
+		step_timer = 0.0f;
 
 		mass_inv = 1.0f / settings.mass;
 	
