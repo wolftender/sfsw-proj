@@ -20,6 +20,7 @@ namespace mini {
 				float spring_length;
 				float spring_friction;
 				float spring_coefficient;
+				float frame_coefficient;
 				float integration_step;
 				float frame_length;
 				bool enable_gravity;
@@ -28,10 +29,11 @@ namespace mini {
 					gravity(9.807f),
 					mass(1.0f),
 					spring_length(1.0f),
-					spring_friction(0.1f),
+					spring_friction(1.0f),
 					spring_coefficient(1.0f),
-					integration_step(0.001f),
-					frame_length(4.0f),
+					frame_coefficient(2.0f),
+					integration_step(0.017f),
+					frame_length(3.2f),
 					enable_gravity(false) { }
 			};
 
@@ -59,6 +61,8 @@ namespace mini {
 
 				simulation_settings_t settings;
 				float time;
+				float mass_inv;
+				float frame_spring_len;
 
 				simulation_state_t(const simulation_settings_t& settings);
 

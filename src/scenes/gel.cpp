@@ -1,10 +1,22 @@
 #include <iostream>
+#include <array>
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "gui.hpp"
 #include "scenes/gel.hpp"
 
 namespace mini {
+	constexpr std::array<glm::vec3, 8> cube_points = {
+		glm::vec3{ -1.0f, -1.0f,  1.0f },
+		glm::vec3{ -1.0f, -1.0f, -1.0f },
+		glm::vec3{ -1.0f,  1.0f,  1.0f },
+		glm::vec3{ -1.0f,  1.0f, -1.0f },
+		glm::vec3{  1.0f, -1.0f,  1.0f },
+		glm::vec3{  1.0f, -1.0f, -1.0f },
+		glm::vec3{  1.0f,  1.0f,  1.0f },
+		glm::vec3{  1.0f,  1.0f, -1.0f }
+	};
+
 	gel_scene::point_mass_t::point_mass_t(const glm::vec3& x) :
 		x(x), dx{0.0f, 0.0f, 0.0f}, ddx{0.0f, 0.0f, 0.0f} {}
 
@@ -32,27 +44,72 @@ namespace mini {
 			float c = settings.spring_coefficient;
 
 			float dn = glm::length(d12);
-			float magnitude = c * (dn - l) / dn;
+			float magnitude = c * (dn - l) / (dn + 0.0001f);
 			
 			auto f12 = magnitude * d12;
 			auto f21 = magnitude * d21;
 
-			force_sums[i] += f12;
-			force_sums[j] += f21;
+			force_sums[i] += f21;
+			force_sums[j] += f12;
 		}
+
+		auto cube_model = glm::mat4x4(1.0f);
+		float s = 0.5f * settings.frame_length;
+
+		cube_model = glm::translate(cube_model, frame_offset);
+		cube_model = cube_model * glm::mat4_cast(frame_rotation);
+		cube_model = glm::scale(cube_model, { s, s, s });
+
+		for (int x = 0; x <= 1; ++x) {
+			for (int y = 0; y <= 1; ++y) {
+				for (int z = 0; z <= 1; ++z) {
+					glm::vec3 frame_point = cube_model * glm::vec4{
+						-1.0f + x * 2.0f,
+						-1.0f + y * 2.0f,
+						-1.0f + z * 2.0f, 1.0f
+					};
+
+					int mx = x * 3;
+					int my = y * 3;
+					int mz = z * 3;
+					int mass_id = (mx * 16) + (my * 4) + mz;
+
+					auto& mass = point_masses[mass_id];
+					float l = frame_spring_len;
+					float c = settings.frame_coefficient;
+					glm::vec3 d = frame_point - mass.x;
+					float dn = glm::length(d);
+					float magnitude = c * (dn - l) / (dn + 0.0001f);
+
+					force_sums[mass_id] += magnitude * d;
+				}
+			}
+		}
+
+		if (settings.enable_gravity) {
+			for (auto& sum : force_sums) {
+				sum += glm::vec3{0.0f, settings.mass * settings.gravity, 0.0f};
+			}
+		}
+
+		const float step = settings.integration_step;
 
 		// calculate newton equation for all point masses
 		for (std::size_t mass_id = 0; mass_id < 64; ++mass_id) {
 			auto& mass = point_masses[mass_id];
 			auto& force_sum = force_sums[mass_id];
 
-
+			mass.x = mass.x + step * mass.dx;
+			mass.dx = mass.dx + step * mass.ddx;
+			mass.ddx = mass_inv * (force_sum - mass.dx * settings.spring_friction);
 		}
 	}
 
 	void gel_scene::simulation_state_t::reset(const simulation_settings_t& settings) {
 		this->settings = settings;
 
+		mass_inv = 1.0f / settings.mass;
+	
 		frame_offset = { 0.0f, 0.0f, 0.0f };
 		frame_rotation = { 1.0f, 0.0f, 0.0f, 0.0f };
 
@@ -64,6 +121,12 @@ namespace mini {
 		float dim = settings.spring_length * 3.0f;
 		float step = settings.spring_length;
 		float origin = dim * 0.5f;
+		float half_frame = settings.frame_length * 0.5f;
+
+		glm::vec3 corner = {-origin, -origin, -origin};
+		glm::vec3 frame_corner = {-half_frame, -half_frame, -half_frame};
+
+		frame_spring_len = glm::distance(corner, frame_corner);
 
 		for (int i = 0; i < 4; ++i) {
 			for (int j = 0; j < 4; ++j) {
@@ -263,6 +326,9 @@ namespace mini {
 			gui::prefix_label("Gravity Force: ", 250.0f);
 			ImGui::InputFloat("##gel_gravity_f", &m_settings.gravity);
 
+			gui::prefix_label("Point Mass: ", 250.0f);
+			ImGui::InputFloat("##gel_point_mass", &m_settings.mass);
+
 			gui::prefix_label("Spring Length: ", 250.0f);
 			ImGui::InputFloat("##gel_spring_len", &m_settings.spring_length);
 
@@ -271,6 +337,9 @@ namespace mini {
 
 			gui::prefix_label("Spring Coefficient: ", 250.0f);
 			ImGui::InputFloat("##gel_spring_coeff", &m_settings.spring_coefficient);
+
+			gui::prefix_label("Frame Spring Coeff.: ", 250.0f);
+			ImGui::InputFloat("##gel_spring_coeff_f", &m_settings.frame_coefficient);
 
 			gui::prefix_label("Frame Size: ", 250.0f);
 			ImGui::InputFloat("##gel_frame_size", &m_settings.frame_length);
@@ -291,14 +360,9 @@ namespace mini {
 	void gel_scene::m_build_cube_object(std::shared_ptr<shader_program> line_shader) {
 		m_cube_object = std::make_shared<segments_array>(line_shader, 8);
 
-		m_cube_object->update_point(0, { -1.0f, -1.0f,  1.0f });
-		m_cube_object->update_point(1, { -1.0f, -1.0f, -1.0f });
-		m_cube_object->update_point(2, { -1.0f,  1.0f,  1.0f });
-		m_cube_object->update_point(3, { -1.0f,  1.0f, -1.0f });
-		m_cube_object->update_point(4, {  1.0f, -1.0f,  1.0f });
-		m_cube_object->update_point(5, {  1.0f, -1.0f, -1.0f });
-		m_cube_object->update_point(6, {  1.0f,  1.0f,  1.0f });
-		m_cube_object->update_point(7, {  1.0f,  1.0f, -1.0f });
+		for (std::size_t i = 0; i < cube_points.size(); ++i) {
+			m_cube_object->update_point(i, cube_points[i]);
+		}
 
 		m_cube_object->add_segment(0, 1);
 		m_cube_object->add_segment(1, 3);
