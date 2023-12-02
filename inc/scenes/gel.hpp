@@ -10,6 +10,7 @@
 #include "viewport.hpp"
 #include "billboard.hpp"
 #include "segments.hpp"
+#include "beziercube.hpp"
 
 namespace mini {
 	class gel_scene : public scene_base {
@@ -109,6 +110,7 @@ namespace mini {
 			std::shared_ptr<billboard_object> m_point_object;
 			std::shared_ptr<segments_array> m_springs_object;
 			std::shared_ptr<segments_array> m_cube_object;
+			std::shared_ptr<bezier_cube> m_soft_object;
 
 			viewport_window m_viewport;
 			glm::vec3 m_frame_euler;

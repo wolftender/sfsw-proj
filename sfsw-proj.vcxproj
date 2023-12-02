@@ -144,6 +144,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\app.cpp" />
+    <ClCompile Include="src\beziercube.cpp" />
     <ClCompile Include="src\billboard.cpp" />
     <ClCompile Include="src\camera.cpp" />
     <ClCompile Include="src\context.cpp" />
@@ -168,6 +169,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="inc\app.hpp" />
+    <ClInclude Include="inc\beziercube.hpp" />
     <ClInclude Include="inc\billboard.hpp" />
     <ClInclude Include="inc\camera.hpp" />
     <ClInclude Include="inc\context.hpp" />
@@ -194,6 +196,7 @@
   <ItemGroup>
     <None Include="shaders\fs_basic.glsl" />
     <None Include="shaders\fs_billboard.glsl" />
+    <None Include="shaders\fs_gelcube.glsl" />
     <None Include="shaders\fs_grid_xy.glsl" />
     <None Include="shaders\fs_grid_xz.glsl" />
     <None Include="shaders\fs_point.glsl" />
@@ -201,11 +204,14 @@
     <None Include="shaders\fs_solidcolor.glsl" />
     <None Include="shaders\fs_white.glsl" />
     <None Include="shaders\gs_lines.glsl" />
+    <None Include="shaders\tcs_gelcube.glsl" />
+    <None Include="shaders\tes_gelcube.glsl" />
     <None Include="shaders\vs_basic.glsl" />
     <None Include="shaders\vs_billboard.glsl" />
     <None Include="shaders\vs_billboard_s.glsl" />
     <None Include="shaders\vs_grid.glsl" />
     <None Include="shaders\vs_pass.glsl" />
+    <None Include="shaders\vs_gelcube.glsl" />
     <None Include="shaders\vs_position.glsl" />
     <None Include="shaders\vs_shaded.glsl" />
     <None Include="shaders\vs_sprite.glsl" />

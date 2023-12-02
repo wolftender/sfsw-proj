@@ -235,6 +235,7 @@ namespace mini {
 		auto cube_shader = get_app().get_store().get_shader("cube");
 		auto grid_shader = get_app().get_store().get_shader("grid_xz");
 		auto point_shader = get_app().get_store().get_shader("point");
+		auto gel_shader = get_app().get_store().get_shader("gelcube");
 
 		get_app().get_context().set_clear_color({ 0.75f, 0.75f, 0.9f });
 
@@ -255,6 +256,10 @@ namespace mini {
 			m_point_object->set_color_tint({1.0f, 0.0f, 0.0f, 1.0f});
 			m_point_object->set_size({16.0f, 16.0f});
 		}
+
+		if (gel_shader) {
+			m_soft_object = std::make_shared<bezier_cube>(gel_shader);
+		}
 	}
 
 	gel_scene::~gel_scene() { }
@@ -273,6 +278,7 @@ namespace mini {
 		// update point positions on the gpu
 		for (std::size_t index = 0; index < m_state.point_masses.size(); ++index) {
 			m_springs_object->update_point(index, m_state.point_masses[index].x);
+			m_soft_object->update_point(index, m_state.point_masses[index].x);
 		}
 	}
 
@@ -307,6 +313,13 @@ namespace mini {
 			cube_model = glm::scale(cube_model, { s, s, s });
 
 			context.draw(m_cube_object, cube_model);
+		}
+
+		if (m_soft_object && m_show_bezier) {
+			auto bezier_model = glm::mat4x4(1.0f);
+
+			m_soft_object->refresh_buffer();
+			context.draw(m_soft_object, bezier_model);
 		}
 	}
 
@@ -418,7 +431,7 @@ namespace mini {
 			gui::prefix_label("Solver Type:", 250.0f);
 
 			if (ImGui::Combo("##gel_solver", &m_solver_method_id, solver_types, 2)) {
-				solver_type_t new_mode;
+				solver_type_t new_mode = solver_type_t::euler;
 				switch (m_solver_method_id) {
 					case 0: new_mode = solver_type_t::euler; break;
 					case 1: new_mode = solver_type_t::runge_kutta; break;

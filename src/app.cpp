@@ -28,6 +28,8 @@ namespace mini {
 		m_store.load_shader("cube", "shaders/vs_shaded.glsl", "shaders/fs_shaded.glsl");
 		m_store.load_shader("gizmo", "shaders/vs_position.glsl", "shaders/fs_solidcolor.glsl");
 		m_store.load_shader("point", "shaders/vs_billboard_s.glsl", "shaders/fs_point.glsl");
+		m_store.load_shader("gelcube", "shaders/vs_gelcube.glsl", "shaders/fs_gelcube.glsl", 
+			"shaders/tcs_gelcube.glsl", "shaders/tes_gelcube.glsl");
 
 		m_scene = std::make_unique<gel_scene>(*this);
 	}

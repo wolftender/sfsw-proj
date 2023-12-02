@@ -81,6 +81,9 @@
     <ClCompile Include="src\segments.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\beziercube.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="inc\app.hpp">
@@ -152,6 +155,9 @@
     <ClInclude Include="inc\segments.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="inc\beziercube.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\fs_basic.glsl" />
@@ -171,6 +177,10 @@
     <None Include="shaders\vs_shaded.glsl" />
     <None Include="shaders\fs_shaded.glsl" />
     <None Include="shaders\fs_point.glsl" />
+    <None Include="shaders\vs_gelcube.glsl" />
+    <None Include="shaders\fs_gelcube.glsl" />
+    <None Include="shaders\tcs_gelcube.glsl" />
+    <None Include="shaders\tes_gelcube.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Font Include="opensans.ttf" />
