@@ -35,5 +35,11 @@ namespace mini {
 		private:
 			void m_draw_main_menu();
 			void m_draw_main_window();
+
+			void m_load_scene_spring();
+			void m_load_scene_top();
+			void m_load_scene_rotation();
+			void m_load_scene_soft();
+			void m_load_scene_ik();
 	};
 }

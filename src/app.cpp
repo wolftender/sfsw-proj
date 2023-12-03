@@ -10,6 +10,7 @@
 #include "scenes/top.hpp"
 #include "scenes/slerp.hpp"
 #include "scenes/gel.hpp"
+#include "scenes/ik.hpp"
 	
 namespace mini {
 	application::application() : 
@@ -35,7 +36,7 @@ namespace mini {
 		m_store.load_texture("slime_albedo", "textures/slime_albedo.png");
 		m_store.load_texture("slime_normal", "textures/slime_normal.png");
 
-		m_scene = std::make_unique<gel_scene>(*this);
+		m_scene = std::make_unique<ik_scene>(*this);
 	}
 
 	scene_base& application::get_scene() {
@@ -97,6 +98,37 @@ namespace mini {
 	}
 
 	void application::t_on_key_event(int key, int scancode, int action, int mods) {
+		bool lshift_down = is_key_down(GLFW_KEY_LEFT_SHIFT);
+		bool rshift_down = is_key_down(GLFW_KEY_RIGHT_SHIFT);
+		bool ctrl_down = is_key_down(GLFW_KEY_LEFT_CONTROL);
+
+		if (ctrl_down && (lshift_down || rshift_down)) {
+			switch (key) {
+				case GLFW_KEY_F1:
+					m_load_scene_spring();
+					return;
+
+				case GLFW_KEY_F2:
+					m_load_scene_top();
+					return;
+
+				case GLFW_KEY_F3:
+					m_load_scene_rotation();
+					return;
+
+				case GLFW_KEY_F4:
+					m_load_scene_soft();
+					return;
+
+				case GLFW_KEY_F5:
+					m_load_scene_ik();
+					return;
+
+				default: 
+					break;
+			}
+		}
+
 		if (m_scene) {
 			m_scene->on_key_event(key, scancode, action, mods);
 		}
@@ -130,23 +162,23 @@ namespace mini {
 			
 			if (ImGui::BeginMenu("Simulation")) {
 				if (ImGui::MenuItem("Spring", "Ctrl + Shift + F1", nullptr, true)) {
-					m_scene = std::make_unique<spring_scene>(*this);
-					m_layout_ready = false;
+					m_load_scene_spring();
 				}
 
 				if (ImGui::MenuItem("Spinning Top", "Ctrl + Shift + F2", nullptr, true)) {
-					m_scene = std::make_unique<top_scene>(*this);
-					m_layout_ready = false;
+					m_load_scene_top();
 				}
 
 				if (ImGui::MenuItem("Rotation Demo", "Ctrl + Shift + F3", nullptr, true)) {
-					m_scene = std::make_unique<slerp_scene>(*this);
-					m_layout_ready = false;
+					m_load_scene_rotation();
 				}
 
 				if (ImGui::MenuItem("Soft Body Demo", "Ctrl + Shift + F4", nullptr, true)) {
-					m_scene = std::make_unique<gel_scene>(*this);
-					m_layout_ready = false;
+					m_load_scene_soft();
+				}
+
+				if (ImGui::MenuItem("IK Demo", "Ctrl + Shift + F5", nullptr, true)) {
+					m_load_scene_ik();
 				}
 
 				ImGui::EndMenu();
@@ -202,5 +234,30 @@ namespace mini {
 		m_draw_main_menu();
 
 		ImGui::End();
+	}
+
+	void application::m_load_scene_spring() {
+		m_scene = std::make_unique<spring_scene>(*this);
+		m_layout_ready = false;
+	}
+
+	void application::m_load_scene_top() {
+		m_scene = std::make_unique<top_scene>(*this);
+		m_layout_ready = false;
+	}
+
+	void application::m_load_scene_rotation() {
+		m_scene = std::make_unique<slerp_scene>(*this);
+		m_layout_ready = false;
+	}
+
+	void application::m_load_scene_soft() {
+		m_scene = std::make_unique<gel_scene>(*this);
+		m_layout_ready = false;
+	}
+
+	void application::m_load_scene_ik() {
+		m_scene = std::make_unique<ik_scene>(*this);
+		m_layout_ready = false;
 	}
 }
