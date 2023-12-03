@@ -31,6 +31,10 @@ namespace mini {
 		m_store.load_shader("gelcube", "shaders/vs_gelcube.glsl", "shaders/fs_gelcube.glsl", 
 			"shaders/tcs_gelcube.glsl", "shaders/tes_gelcube.glsl");
 
+		// load textures
+		m_store.load_texture("slime_albedo", "textures/slime_albedo.png");
+		m_store.load_texture("slime_normal", "textures/slime_normal.png");
+
 		m_scene = std::make_unique<gel_scene>(*this);
 	}
 

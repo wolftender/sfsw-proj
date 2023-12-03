@@ -45,6 +45,11 @@ namespace mini {
 				const std::string & gs_file
 			);
 
+			void load_texture(
+				const std::string& name,
+				const std::string& file
+			);
+
 			shader_handle_t get_shader(const std::string & name) const;
 			texture_handle_t get_texture(const std::string & name) const;
 
@@ -84,6 +89,10 @@ namespace mini {
 				const std::string& tcs_file, 
 				const std::string& tes_file, 
 				const std::string& gs_file
+			) const;
+
+			std::shared_ptr<texture> m_load_texture(
+				const std::string& file
 			) const;
 	};
 }

@@ -188,4 +188,12 @@
   <ItemGroup>
     <Text Include="functions.txt" />
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="textures\slime_albedo.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="textures\slime_normal.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+  </ItemGroup>
 </Project>

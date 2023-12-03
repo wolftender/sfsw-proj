@@ -81,6 +81,11 @@ namespace mini {
 		return shader;
 	}
 
+	std::shared_ptr<texture> resource_store::m_load_texture(const std::string& file) const {
+		texture_handle_t new_texture = texture::load_from_file(file);
+		return new_texture;
+	}
+
 	void resource_store::load_shader(
 		const std::string& name, 
 		const std::string& vs_file, 
@@ -117,6 +122,10 @@ namespace mini {
 		const std::string& gs_file) {
 
 		m_add_shader(name, m_load_shader(vs_file, ps_file, tcs_file, tes_file, gs_file));
+	}
+
+	void resource_store::load_texture(const std::string& name, const std::string& file) {
+		m_add_texture(name, m_load_texture(file));
 	}
 
 	shader_handle_t resource_store::get_shader(const std::string& name) const {

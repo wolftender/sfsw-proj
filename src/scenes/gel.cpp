@@ -289,17 +289,20 @@ namespace mini {
 		m_viewport(app, "Soft Body"),
 		m_frame_euler{0.0f, 0.0f, 0.0f},
 		m_solver_method_id(0),
-		m_show_springs(true),
-		m_show_points(true), 
+		m_show_springs(false),
+		m_show_points(false), 
 		m_show_bezier(true),
 		m_show_deform(true),
-		m_wireframe_mode(true) {
+		m_wireframe_mode(false) {
 
 		auto line_shader = get_app().get_store().get_shader("line");
 		auto cube_shader = get_app().get_store().get_shader("cube");
 		auto grid_shader = get_app().get_store().get_shader("grid_xz");
 		auto point_shader = get_app().get_store().get_shader("point");
 		auto gel_shader = get_app().get_store().get_shader("gelcube");
+
+		auto slime_albedo = get_app().get_store().get_texture("slime_albedo");
+		auto slime_normal = get_app().get_store().get_texture("slime_normal");
 
 		get_app().get_context().set_clear_color({ 0.75f, 0.75f, 0.9f });
 
@@ -323,6 +326,8 @@ namespace mini {
 
 		if (gel_shader) {
 			m_soft_object = std::make_shared<bezier_cube>(gel_shader);
+			m_soft_object->set_albedo_map(slime_albedo);
+			m_soft_object->set_normal_map(slime_normal);
 		}
 	}
 

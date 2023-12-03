@@ -222,6 +222,10 @@
   <ItemGroup>
     <Text Include="functions.txt" />
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="textures\slime_albedo.png" />
+    <Image Include="textures\slime_normal.png" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

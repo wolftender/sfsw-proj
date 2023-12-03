@@ -1,5 +1,6 @@
 #pragma once
 #include "context.hpp"
+#include "texture.hpp"
 
 namespace mini {
 	static constexpr int num_bezier_cube_points = 64;
@@ -18,6 +19,7 @@ namespace mini {
 
 			glm::vec4 m_color;
 			std::shared_ptr<shader_program> m_shader;
+			std::shared_ptr<texture> m_albedo_map, m_normal_map;
 
 			bool m_wireframe_mode;
 
@@ -30,6 +32,12 @@ namespace mini {
 
 			bool get_wireframe() const;
 			void set_wireframe(bool enable);
+
+			void set_albedo_map(std::shared_ptr<texture> albedo_map);
+			void set_normal_map(std::shared_ptr<texture> normal_map);
+
+			std::shared_ptr<texture> get_albedo_map() const;
+			std::shared_ptr<texture> get_normal_map() const;
 
 			bezier_cube(std::shared_ptr<shader_program> shader);
 			~bezier_cube();

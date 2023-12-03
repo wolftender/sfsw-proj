@@ -48,6 +48,22 @@ namespace mini {
 		m_wireframe_mode = enable;
 	}
 
+	void bezier_cube::set_albedo_map(std::shared_ptr<texture> albedo_map) {
+		m_albedo_map = albedo_map;
+	}
+
+	void bezier_cube::set_normal_map(std::shared_ptr<texture> normal_map) {
+		m_normal_map = normal_map;
+	}
+
+	std::shared_ptr<texture> bezier_cube::get_albedo_map() const {
+		return m_albedo_map;
+	}
+
+	std::shared_ptr<texture> bezier_cube::get_normal_map() const {
+		return m_normal_map;
+	}
+
 	bezier_cube::bezier_cube(std::shared_ptr<shader_program> shader) :
 		m_u_res(24), m_v_res(24), m_color{1.0f, 0.0f, 0.0f, 1.0f}, m_wireframe_mode(true) {
 		m_shader = shader;
@@ -170,7 +186,23 @@ namespace mini {
 		shader.set_uniform("u_resolution", resolution);
 		shader.set_uniform("u_line_width", 2.0f);
 		shader.set_uniform("u_color", m_color);
-		shader.set_uniform("u_shininess", 128.0f);
+		shader.set_uniform("u_shininess", 64.0f);
+
+		if (m_albedo_map) {
+			m_albedo_map->bind(GL_TEXTURE0);
+			shader.set_uniform_int("u_enable_albedo", 1);
+			shader.set_uniform_int("u_albedo_map", 0);
+		} else {
+			shader.set_uniform_int("u_enable_albedo", 0);
+		}
+
+		if (m_normal_map) {
+			m_normal_map->bind(GL_TEXTURE1);
+			shader.set_uniform_int("u_enable_normal", 1);
+			shader.set_uniform_int("u_normal_map", 1);
+		} else {
+			shader.set_uniform_int("u_enable_normal", 0);
+		}
 
 		context.set_lights(shader);
 	}

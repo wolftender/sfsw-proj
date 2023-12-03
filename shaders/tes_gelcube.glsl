@@ -2,13 +2,10 @@
 
 layout (quads) in;
 
-in TCS_OUT {
-    vec2 uv;
-} tes_in[];
-
 out TES_OUT {
     vec3 world_pos;
     vec3 normal;
+    vec3 tangent;
     vec2 uv;
 } tes_out;
 
@@ -78,43 +75,22 @@ vec3 bernstein_grid (float u, float v) {
     return bernstein (p0, p1, p2, p3, v);
 }
 
-vec2 bernstein_uv (vec2 p0, vec2 p1, vec2 p2, vec2 p3, float t) {
-    vec2 res;
-    res.x = decasteljeu (p0.x, p1.x, p2.x, p3.x, t);
-    res.y = decasteljeu (p0.y, p1.y, p2.y, p3.y, t);
-    return res;
-}
-
-vec2 tx (int row, int col) {
-    return tes_in[loc(row, col)].uv.xy;
-}
-
-vec2 bernstein_grid_uv (float u, float v) {
-    vec2 p0, p1, p2, p3;
-
-    p0 = bernstein_uv (tx(0,0),tx(0,1),tx(0,2),tx(0,3),u);
-    p1 = bernstein_uv (tx(1,0),tx(1,1),tx(1,2),tx(1,3),u);
-    p2 = bernstein_uv (tx(2,0),tx(2,1),tx(2,2),tx(2,3),u);
-    p3 = bernstein_uv (tx(3,0),tx(3,1),tx(3,2),tx(3,3),u);
-
-    return bernstein_uv (p0, p1, p2, p3, v);
-}
-
-vec3 bernstein_norm(float u, float v) {
+vec3 surface_ddu(float u, float v) {
     vec3 p00 = bernstein(p(0,0),p(0,1),p(0,2),p(0,3),u);
     vec3 p01 = bernstein(p(1,0),p(1,1),p(1,2),p(1,3),u);
     vec3 p02 = bernstein(p(2,0),p(2,1),p(2,2),p(2,3),u);
     vec3 p03 = bernstein(p(3,0),p(3,1),p(3,2),p(3,3),u);
 
+    return der_decasteljeu(p00, p01, p02, p03, v);
+}
+
+vec3 surface_ddv(float u, float v) {
     vec3 p10 = bernstein(p(0,0),p(0,0),p(2,0),p(3,0),v);
     vec3 p11 = bernstein(p(0,1),p(0,1),p(2,1),p(3,1),v);
     vec3 p12 = bernstein(p(0,2),p(0,2),p(2,2),p(3,2),v);
     vec3 p13 = bernstein(p(0,3),p(0,3),p(2,3),p(3,3),v);
 
-    vec3 ddu = der_decasteljeu(p00, p01, p02, p03, v);
-    vec3 ddv = der_decasteljeu(p10, p11, p12, p13, u);
-
-    return normalize(cross(ddu,ddv));
+    return der_decasteljeu(p10, p11, p12, p13, u);
 }
 
 void main () {
@@ -125,7 +101,11 @@ void main () {
 
     gl_Position = u_projection * u_view * pos;
 
+    vec3 ddu = surface_ddu(u,v);
+    vec3 ddv = surface_ddv(u,v);
+
     tes_out.world_pos = pos.xyz;
-    tes_out.uv = bernstein_grid_uv(u,v);
-    tes_out.normal = bernstein_norm(u,v);
+    tes_out.uv = vec2(u,v);
+    tes_out.normal = normalize(cross(ddu,ddv));
+    tes_out.tangent = normalize(ddu);
 }
