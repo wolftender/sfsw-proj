@@ -292,7 +292,8 @@ namespace mini {
 		m_show_springs(true),
 		m_show_points(true), 
 		m_show_bezier(true),
-		m_show_deform(true) {
+		m_show_deform(true),
+		m_wireframe_mode(true) {
 
 		auto line_shader = get_app().get_store().get_shader("line");
 		auto cube_shader = get_app().get_store().get_shader("cube");
@@ -346,6 +347,14 @@ namespace mini {
 	}
 
 	void gel_scene::render(app_context& context) {
+		context.clear_lights();
+		auto& light = context.get_light(0);
+
+		light.color = { 1.0f, 1.0f, 1.0f };
+		light.intensity = 1.0f;
+		light.position = { -5.0f, -5.0f, -5.0f };
+		light.att_const = 1.0f;
+
 		if (m_grid) {
 			auto grid_model = glm::mat4x4(1.0f);
 			context.draw(m_grid, grid_model);
@@ -381,7 +390,9 @@ namespace mini {
 		if (m_soft_object && m_show_bezier) {
 			auto bezier_model = glm::mat4x4(1.0f);
 
+			m_soft_object->set_wireframe(m_wireframe_mode);
 			m_soft_object->refresh_buffer();
+
 			context.draw(m_soft_object, bezier_model);
 		}
 	}
@@ -460,6 +471,9 @@ namespace mini {
 
 			gui::prefix_label("Show Model: ", 250.0f);
 			ImGui::Checkbox("##gel_show_deform", &m_show_deform);
+
+			gui::prefix_label("Show Wireframe: ", 250.0f);
+			ImGui::Checkbox("##gel_show_wirefr", &m_wireframe_mode);
 		}
 
 		if (ImGui::CollapsingHeader("Simulation Settings", ImGuiTreeNodeFlags_DefaultOpen)) {

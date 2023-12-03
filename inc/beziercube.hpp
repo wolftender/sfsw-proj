@@ -19,12 +19,17 @@ namespace mini {
 			glm::vec4 m_color;
 			std::shared_ptr<shader_program> m_shader;
 
+			bool m_wireframe_mode;
+
 		public:
 			uint32_t get_u_res() const;
 			uint32_t get_v_res() const;
 			
 			void set_u_res(uint32_t u_res);
 			void set_v_res(uint32_t v_res);
+
+			bool get_wireframe() const;
+			void set_wireframe(bool enable);
 
 			bezier_cube(std::shared_ptr<shader_program> shader);
 			~bezier_cube();

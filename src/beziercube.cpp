@@ -16,11 +16,11 @@ namespace mini {
 		};
 
 		std::size_t index = 0;
-		build_surface([&](int x, int y) {indices[index++] = get_index(x, y, 0); });
+		build_surface([&](int x, int y) {indices[index++] = get_index(x, 3-y, 0); });
 		build_surface([&](int x, int y) {indices[index++] = get_index(x, y, 3); });
 		build_surface([&](int x, int y) {indices[index++] = get_index(x, 0, y); });
-		build_surface([&](int x, int y) {indices[index++] = get_index(x, 3, y); });
-		build_surface([&](int x, int y) {indices[index++] = get_index(0, x, y); });
+		build_surface([&](int x, int y) {indices[index++] = get_index(x, 3, 3-y); });
+		build_surface([&](int x, int y) {indices[index++] = get_index(0, x, 3-y); });
 		build_surface([&](int x, int y) {indices[index++] = get_index(3, x, y); });
 	}
 	
@@ -40,8 +40,16 @@ namespace mini {
 		m_v_res = v_res;
 	}
 
+	bool bezier_cube::get_wireframe() const {
+		return m_wireframe_mode;
+	}
+
+	void bezier_cube::set_wireframe(bool enable) {
+		m_wireframe_mode = enable;
+	}
+
 	bezier_cube::bezier_cube(std::shared_ptr<shader_program> shader) :
-		m_u_res(24), m_v_res(24), m_color{1.0f, 0.0f, 0.0f, 1.0f} {
+		m_u_res(24), m_v_res(24), m_color{1.0f, 0.0f, 0.0f, 1.0f}, m_wireframe_mode(true) {
 		m_shader = shader;
 		m_pos_buffer = m_uv_buffer = m_index_buffer = m_vao = 0;
 
@@ -121,19 +129,25 @@ namespace mini {
 		const auto& view_matrix = context.get_view_matrix();
 		const auto& proj_matrix = context.get_projection_matrix();
 
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		if (m_wireframe_mode) {
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		}
 
 		m_bind_shader(context, *m_shader.get(), world_matrix);
 
 		// first render pass - u,v
 		m_shader->set_uniform_uint("u_resolution_v", static_cast<GLuint>(m_v_res));
 		m_shader->set_uniform_uint("u_resolution_u", static_cast<GLuint>(m_u_res));
+		m_shader->set_uniform_int("u_wireframe", static_cast<GLint>(m_wireframe_mode));
 		m_shader->set_uniform_int("u_texture", 0);
 
 		glPatchParameteri(GL_PATCH_VERTICES, 16);
 		glDrawElements(GL_PATCHES, m_indices.size(), GL_UNSIGNED_INT, 0);
 
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		if (m_wireframe_mode) {
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		}
+
 		glBindVertexArray(0);
 	}
 
@@ -156,5 +170,8 @@ namespace mini {
 		shader.set_uniform("u_resolution", resolution);
 		shader.set_uniform("u_line_width", 2.0f);
 		shader.set_uniform("u_color", m_color);
+		shader.set_uniform("u_shininess", 128.0f);
+
+		context.set_lights(shader);
 	}
 }

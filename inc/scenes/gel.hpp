@@ -127,6 +127,7 @@ namespace mini {
 			bool m_show_points;
 			bool m_show_bezier;
 			bool m_show_deform;
+			bool m_wireframe_mode;
 
 		public:
 			gel_scene(application_base& app);

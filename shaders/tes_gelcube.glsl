@@ -7,6 +7,8 @@ in TCS_OUT {
 } tes_in[];
 
 out TES_OUT {
+    vec3 world_pos;
+    vec3 normal;
     vec2 uv;
 } tes_out;
 
@@ -32,6 +34,21 @@ float decasteljeu (float b00, float b01, float b02, float b03, float t) {
     b30 = t0 * b20 + t1 * b21;
 
     return b30;
+}
+
+vec3 der_decasteljeu(vec3 b00, vec3 b01, vec3 b02, vec3 b03, float t) {
+        float t1 = t;
+		float t0 = 1.0 - t;
+
+		vec3 d10 = -3.0f * b00 + 3.0f * b01;
+		vec3 d11 = -3.0f * b01 + 3.0f * b02;
+		vec3 d12 = -3.0f * b02 + 3.0f * b03;
+
+		vec3 d20 = t0 * d10 + t1 * d11;
+		vec3 d21 = t0 * d11 + t1 * d12;
+
+		vec3 d30 = t0 * d20 + t1 * d21;
+		return d30;
 }
 
 vec3 bernstein (vec3 p0, vec3 p1, vec3 p2, vec3 p3, float t) {
@@ -83,6 +100,23 @@ vec2 bernstein_grid_uv (float u, float v) {
     return bernstein_uv (p0, p1, p2, p3, v);
 }
 
+vec3 bernstein_norm(float u, float v) {
+    vec3 p00 = bernstein(p(0,0),p(0,1),p(0,2),p(0,3),u);
+    vec3 p01 = bernstein(p(1,0),p(1,1),p(1,2),p(1,3),u);
+    vec3 p02 = bernstein(p(2,0),p(2,1),p(2,2),p(2,3),u);
+    vec3 p03 = bernstein(p(3,0),p(3,1),p(3,2),p(3,3),u);
+
+    vec3 p10 = bernstein(p(0,0),p(0,0),p(2,0),p(3,0),v);
+    vec3 p11 = bernstein(p(0,1),p(0,1),p(2,1),p(3,1),v);
+    vec3 p12 = bernstein(p(0,2),p(0,2),p(2,2),p(3,2),v);
+    vec3 p13 = bernstein(p(0,3),p(0,3),p(2,3),p(3,3),v);
+
+    vec3 ddu = der_decasteljeu(p00, p01, p02, p03, v);
+    vec3 ddv = der_decasteljeu(p10, p11, p12, p13, u);
+
+    return normalize(cross(ddu,ddv));
+}
+
 void main () {
 	float u = gl_TessCoord.x;
 	float v = gl_TessCoord.y;
@@ -90,5 +124,8 @@ void main () {
     vec4 pos = vec4 (bernstein_grid (u, v), 1.0);
 
     gl_Position = u_projection * u_view * pos;
+
+    tes_out.world_pos = pos.xyz;
     tes_out.uv = bernstein_grid_uv(u,v);
+    tes_out.normal = bernstein_norm(u,v);
 }
