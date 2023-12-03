@@ -43,11 +43,74 @@ namespace mini {
 	//////// RK METHOD ///////
 
 	gel_scene::runge_kutta_solver_t::runge_kutta_solver_t(std::size_t num_masses) {
-		throw std::runtime_error("not implemented");
+		force_sums.resize(num_masses);
+		x0.resize(num_masses);
+		v0.resize(num_masses);
+		k1v.resize(num_masses);
+		k2v.resize(num_masses);
+		k3v.resize(num_masses);
+		k4v.resize(num_masses);
+		k1x.resize(num_masses);
+		k2x.resize(num_masses);
+		k3x.resize(num_masses);
+		k4x.resize(num_masses);
 	}
 
 	void gel_scene::runge_kutta_solver_t::solve(simulation_state_t& state, float step) {
-		throw std::runtime_error("not implemented");
+		// a(x,v,t) = 1/m * (force_sum - kv)
+
+		auto num_masses = state.point_masses.size();
+		const float dt = step;
+		const float friction = state.settings.spring_friction;
+		const float minv = state.mass_inv;
+
+		state.calculate_force_sums(force_sums);
+		for (size_t i = 0; i < num_masses; ++i) {
+			auto& mass = state.point_masses[i];
+			x0[i] = mass.x;
+			v0[i] = mass.dx;
+
+			k1v[i] = minv * (force_sums[i] - mass.dx * friction) * dt;
+			k1x[i] = mass.dx * dt;
+
+			// setup next step
+			mass.x = mass.x + k1x[i] * 0.5f;
+			mass.dx = mass.dx + k1v[i] * 0.5f;
+		}
+
+		state.calculate_force_sums(force_sums);
+		for (size_t i = 0; i < num_masses; ++i) {
+			auto& mass = state.point_masses[i];
+
+			// a(x + k1x/2, v + k1v/2)
+			k2v[i] = minv * (force_sums[i] - mass.dx * friction) * dt;
+			k2x[i] = mass.dx * dt;
+
+			mass.x = mass.x + k2x[i] * 0.5f;
+			mass.dx = mass.dx + k2v[i] * 0.5f;
+		}
+
+		state.calculate_force_sums(force_sums);
+		for (size_t i = 0; i < num_masses; ++i) {
+			auto& mass = state.point_masses[i];
+
+			// a(x + k1x/2, v + k1v/2)
+			k3v[i] = minv * (force_sums[i] - mass.dx * friction) * dt;
+			k3x[i] = mass.dx * dt;
+
+			mass.x = mass.x + k3x[i];
+			mass.dx = mass.dx + k3v[i];
+		}
+
+		state.calculate_force_sums(force_sums);
+		for (size_t i = 0; i < num_masses; ++i) {
+			auto& mass = state.point_masses[i];
+			k4v[i] = minv * (force_sums[i] - mass.dx * friction) * dt;
+			k4x[i] = mass.dx * dt;
+
+			mass.dx = v0[i] + (k1v[i] + 2.0f * k2v[i] + 2.0f * k3v[i] + k4v[i]) / 6.0f;
+			mass.x = x0[i] + (k1x[i] + 2.0f * k2x[i] + 2.0f * k3x[i] + k4x[i]) / 6.0f;
+		}
 	}
 
 	gel_scene::simulation_state_t::simulation_state_t(const simulation_settings_t& settings) {

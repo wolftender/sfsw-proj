@@ -36,6 +36,12 @@ namespace mini {
 			};
 
 			struct runge_kutta_solver_t : public differential_solver_t {
+				std::vector<glm::vec3> force_sums;
+
+				std::vector<glm::vec3> x0, v0;
+				std::vector<glm::vec3> k1v, k2v, k3v, k4v;
+				std::vector<glm::vec3> k1x, k2x, k3x, k4x;
+
 				runge_kutta_solver_t(std::size_t num_masses);
 				runge_kutta_solver_t(const runge_kutta_solver_t&) = delete;
 				runge_kutta_solver_t& operator=(const runge_kutta_solver_t&) = delete;
