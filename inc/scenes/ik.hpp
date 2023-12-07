@@ -1,10 +1,17 @@
 #pragma once
 #include "scene.hpp"
 #include "grid.hpp"
+#include "segments.hpp"
 
 namespace mini {
 	class ik_scene : public scene_base {
 		private:
+			enum class mouse_mode_t {
+				start_config,
+				end_config,
+				obstacle
+			};
+
 			struct robot_configuration_t {
 				float theta1;
 				float theta2;
@@ -36,14 +43,24 @@ namespace mini {
 
 			float m_arm1_len;
 			float m_arm2_len;
+			int m_mouse_tool_id;
 
 			robot_configuration_t m_start_config;
+			robot_configuration_t m_current_config;
 			robot_configuration_t m_end_config;
 
 			int m_last_vp_width, m_last_vp_height;
+			bool m_mouse_in_viewport, m_viewport_focus;
+			offset_t m_vp_mouse_offset;
 
 			// objects
 			std::shared_ptr<grid_object> m_grid;
+			std::shared_ptr<segments_array> m_robot_arm_start;
+			std::shared_ptr<segments_array> m_robot_arm_end;
+			std::shared_ptr<segments_array> m_robot_arm_curr;
+
+			std::unique_ptr<camera> m_old_camera;
+			mouse_mode_t m_mouse_mode;
 
 		public:
 			ik_scene(application_base& app);
@@ -55,9 +72,22 @@ namespace mini {
 			virtual void render(app_context& context) override;
 			virtual void gui() override;
 			virtual void menu() override;
+			virtual void on_mouse_button(int button, int action, int mods) override;
 
 		private:
 			void m_gui_settings();
 			void m_gui_viewport();
+			
+			void m_handle_mouse_click(float x, float y);
+			void m_handle_mouse_release(float x, float y);
+
+			std::shared_ptr<segments_array> m_build_robot_arm(
+				std::shared_ptr<shader_program> line_shader) const;
+
+			void m_configure_robot_arm(
+				std::shared_ptr<segments_array>& arm, 
+				const robot_configuration_t& config);
+
+			bool m_solve_arm_ik(robot_configuration_t& config, float x, float y) const;
 	};
 }

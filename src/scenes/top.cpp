@@ -171,6 +171,10 @@ namespace mini {
 			m_curve = std::make_shared<curve>(line_shader);
 			m_curve->set_color({ 0.890f, 0.657f, 0.0178f, 1.0f });
 		}
+
+		auto camera = std::make_unique<default_camera>();
+		camera->video_mode_change(get_app().get_context().get_video_mode());
+		get_app().get_context().set_camera(std::move(camera));
 	}
 
 	top_scene::~top_scene() { }

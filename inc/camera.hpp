@@ -84,4 +84,35 @@ namespace mini {
 		private:
 			void m_recalculate_projection ();
 	};
+
+	class ortho_camera : public camera {
+		private:
+			glm::mat4x4 m_projection, m_projection_inv;
+			float m_left, m_right, m_bottom, m_top, m_near, m_far;
+
+		public:
+			float get_left() const;
+			float get_right() const;
+			float get_top() const;
+			float get_bottom() const;
+			float get_near() const;
+			float get_far() const;
+
+			void set_left(float left);
+			void set_right(float right);
+			void set_top(float top);
+			void set_bottom(float bottom);
+			void set_near(float near);
+			void set_far(float far);
+
+			ortho_camera();
+			ortho_camera(const glm::vec3& position, const glm::vec3& target);
+
+			virtual const glm::mat4x4& get_projection_matrix() const override;
+			virtual const glm::mat4x4& get_projection_inverse() const override;
+			virtual void video_mode_change(const video_mode_t& mode) override;
+
+		private:
+			void m_recalculate_projection();
+	};
 }

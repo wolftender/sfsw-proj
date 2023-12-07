@@ -329,6 +329,10 @@ namespace mini {
 			m_soft_object->set_albedo_map(slime_albedo);
 			m_soft_object->set_normal_map(slime_normal);
 		}
+
+		auto camera = std::make_unique<default_camera>();
+		camera->video_mode_change(get_app().get_context().get_video_mode());
+		get_app().get_context().set_camera(std::move(camera));
 	}
 
 	gel_scene::~gel_scene() { }

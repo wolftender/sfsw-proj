@@ -252,6 +252,10 @@ namespace mini {
 		if (gizmo_shader) {
 			m_gizmo = std::make_shared<gizmo>(gizmo_shader);
 		}
+
+		auto camera = std::make_unique<default_camera>();
+		camera->video_mode_change(get_app().get_context().get_video_mode());
+		get_app().get_context().set_camera(std::move(camera));
 	}
 
 	void slerp_scene::layout(ImGuiID dockspace_id) {

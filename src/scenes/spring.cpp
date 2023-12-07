@@ -50,6 +50,10 @@ namespace mini {
 		}
 
 		m_start_simulation();
+
+		auto camera = std::make_unique<default_camera>();
+		camera->video_mode_change(get_app().get_context().get_video_mode());
+		get_app().get_context().set_camera(std::move(camera));
 	}
 
 	std::shared_ptr<curve> spring_scene::m_make_wire_simplex(std::shared_ptr<shader_program> shader) const {
