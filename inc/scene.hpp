@@ -15,6 +15,7 @@ namespace mini {
 
 			virtual scene_base& get_scene() = 0;
 			virtual app_context& get_context() = 0;
+			virtual const app_context& get_context() const = 0;
 			virtual resource_store& get_store() = 0;
 	};
 
@@ -24,6 +25,10 @@ namespace mini {
 
 		public:
 			application_base& get_app() {
+				return m_app;
+			}
+			
+			const application_base& get_app() const {
 				return m_app;
 			}
 

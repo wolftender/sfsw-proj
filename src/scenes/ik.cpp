@@ -17,8 +17,10 @@ namespace mini {
 		m_mouse_mode(mouse_mode_t::start_config),
 		m_vp_mouse_offset{0, 0},
 		m_mouse_tool_id(0),
+		m_obstacle_start{0.0f, 0.0f},
 		m_end_point{11.0f, 0.0f},
 		m_start_point{0.0f, 11.0f},
+		m_selected_obstacle(-1),
 		m_is_start_ok(false),
 		m_is_end_ok(false),
 		m_alt_solution(false),
@@ -29,6 +31,7 @@ namespace mini {
 
 		auto xy_grid_shader = app.get_store().get_shader("grid_xy");
 		auto line_shader = get_app().get_store().get_shader("line");
+		auto billboard_shader = get_app().get_store().get_shader("obstacle");
 
 		if (xy_grid_shader) {
 			m_grid = std::make_shared<grid_object>(xy_grid_shader);
@@ -38,6 +41,11 @@ namespace mini {
 			m_robot_arm_start = m_build_robot_arm(line_shader);
 			m_robot_arm_end = m_build_robot_arm(line_shader);
 			m_robot_arm_curr = m_build_robot_arm(line_shader);
+		}
+
+		if (billboard_shader) {
+			m_billboard = std::make_shared<plane_object>(billboard_shader);
+			m_billboard->set_color_tint(glm::vec4{0.0558, 0.595, 0.930, 1.0f});
 		}
 
 		constexpr auto pi = glm::pi<float>();
@@ -84,6 +92,26 @@ namespace mini {
 		m_configure_robot_arm(m_robot_arm_start, m_start_config);
 		m_configure_robot_arm(m_robot_arm_curr, m_current_config);
 		m_configure_robot_arm(m_robot_arm_end, m_end_config);
+
+		if (m_is_adding_obstacle) {
+			if (!m_viewport_focus) {
+				m_is_adding_obstacle = false;
+			}
+
+			auto mouse_world = m_get_mouse_world();
+
+			float min_x = glm::min(mouse_world.x, m_obstacle_start.x);
+			float min_y = glm::min(mouse_world.y, m_obstacle_start.y);
+
+			float max_x = glm::max(mouse_world.x, m_obstacle_start.x);
+			float max_y = glm::max(mouse_world.y, m_obstacle_start.y);
+
+			float width = max_x - min_x;
+			float height = max_y - min_y;
+
+			m_curr_obstacle.position = {min_x, min_y};
+			m_curr_obstacle.size = {width, height};
+		}
 	}
 
 	void ik_scene::render(app_context& context) {
@@ -98,6 +126,29 @@ namespace mini {
 			grid_model = glm::rotate(grid_model, pi * 0.5f, { 1.0f, 0.0f, 0.0f });
 
 			context.draw(m_grid, grid_model);
+		}
+
+		const auto draw_obstacle = [&](const obstacle_t& obstacle) {
+			auto obstacle_model = glm::mat4x4(1.0f);
+			glm::vec3 translation = { obstacle.position.x, -obstacle.position.y, 0.0f };
+			glm::vec3 scale = { obstacle.size.x * 0.5f, -obstacle.size.y * 0.5f, 1.0f };
+
+			translation = translation + scale;
+
+			obstacle_model = glm::translate(obstacle_model, translation);
+			obstacle_model = glm::scale(obstacle_model, scale);
+
+			context.draw(m_billboard, obstacle_model);
+		};
+
+		if (m_billboard) {
+			if (m_is_adding_obstacle) {
+				draw_obstacle(m_curr_obstacle);	
+			}
+
+			for (const auto& obstacle : m_obstacles) {
+				draw_obstacle(obstacle);
+			}
 		}
 
 		auto arm_model = glm::mat4x4(1.0f);
@@ -126,26 +177,20 @@ namespace mini {
 			bool is_press = (action == GLFW_PRESS);
 			bool is_release = (action == GLFW_RELEASE);
 
-			float mx = m_vp_mouse_offset.x;
-			float my = m_vp_mouse_offset.y;
-
-			float vp_width = m_last_vp_width;
-			float vp_height = m_last_vp_height;
-
-			float sx = (mx / vp_width) * 2.0f - 1.0f;
-			float sy = 1.0f - (my / vp_height) * 2.0f;
-
-			const auto& camera = get_app().get_context().get_camera();
-			glm::vec4 screen_pos = { sx, sy, 1.0f, 1.0f };
-			
-			glm::mat4x4 view_proj_inv = camera.get_view_inverse() * camera.get_projection_inverse();
-			glm::vec4 world_pos = view_proj_inv * screen_pos;
+			auto world_pos = m_get_mouse_world();
 
 			if (is_press) {
 				m_handle_mouse_click(world_pos.x, world_pos.y);
 			} else if (is_release) {
 				m_handle_mouse_release(world_pos.x, world_pos.y);
 			}
+		}
+	}
+
+	void ik_scene::on_key_event(int key, int scancode, int action, int mods) {
+		if (action == GLFW_PRESS && key == GLFW_KEY_LEFT_ALT) {
+			m_mouse_tool_id = (m_mouse_tool_id + 1) % 3;
+			m_mode_changed();
 		}
 	}
 
@@ -178,14 +223,7 @@ namespace mini {
 			gui::prefix_label("Mouse Tool:", 250.0f);
 
 			if (ImGui::Combo("##ik_tool", &m_mouse_tool_id, mouse_modes, 3)) {
-				mouse_mode_t new_mode = mouse_mode_t::start_config;
-				switch (m_mouse_tool_id) {
-				case 0: new_mode = mouse_mode_t::start_config; break;
-				case 1: new_mode = mouse_mode_t::end_config; break;
-				case 2: new_mode = mouse_mode_t::obstacle; break;
-				}
-
-				m_mouse_mode = new_mode;
+				m_mode_changed();
 			}
 
 			ImGui::SetNextItemOpen(true, ImGuiCond_Once);
@@ -236,6 +274,51 @@ namespace mini {
 
 			ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 			if (ImGui::TreeNode("Obstacles")) {
+				if (ImGui::BeginListBox("##objectlist", ImVec2(-1.0f, 200.0f))) {
+					ImGuiListClipper clipper;
+					clipper.Begin(m_obstacles.size());
+
+					while (clipper.Step()) {
+						for (int i = clipper.DisplayStart; i < clipper.DisplayEnd && i < m_obstacles.size(); ++i) {
+							auto& obstacles = m_obstacles[i];
+
+							std::string full_name;
+							bool selected = (i == m_selected_obstacle);
+
+							if (!selected) {
+								full_name = "obstacle #" + std::to_string(i);
+							} else {
+								full_name = "*obstacle #" + std::to_string(i);
+							}
+
+							if (ImGui::Selectable(full_name.c_str(), &selected)) {
+								m_selected_obstacle = i;
+							}
+						}
+					}
+
+					clipper.End();
+					ImGui::EndListBox();
+				}
+
+				if (m_selected_obstacle < 0) {
+					ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
+					ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);					
+				}
+
+				bool deleted = false;
+
+				if (ImGui::Button("Delete", ImVec2(-1.0f, 24.0f))) {
+					m_obstacles.erase(m_obstacles.begin() + m_selected_obstacle);
+					m_selected_obstacle = -1;
+					deleted = true;
+				}
+
+				if (m_selected_obstacle < 0 && !deleted) {
+					ImGui::PopItemFlag();
+					ImGui::PopStyleVar();
+				}
+
 				ImGui::TreePop();
 			}
 
@@ -309,11 +392,19 @@ namespace mini {
 				break;
 
 			case mouse_mode_t::obstacle:
+				m_is_adding_obstacle = true;
+				m_curr_obstacle.position = {x, y};
+				m_curr_obstacle.size = {0.0f, 0.0f};
+				m_obstacle_start = {x, y};
 				break;
 		}
 	}
 
 	void ik_scene::m_handle_mouse_release(float x, float y) {
+		if (m_is_adding_obstacle) {
+			m_obstacles.push_back(m_curr_obstacle);
+			m_is_adding_obstacle = false;
+		}
 	}
 
 	bool ik_scene::m_solve_arm_ik(robot_configuration_t& config, float x, float y) const {
@@ -393,6 +484,36 @@ namespace mini {
 		arm->update_point(1, p1);
 		arm->update_point(2, p2);
 		arm->rebuild_buffers();
+	}
+
+	glm::vec2 ik_scene::m_get_mouse_world() const {
+		float mx = m_vp_mouse_offset.x;
+		float my = m_vp_mouse_offset.y;
+
+		float vp_width = m_last_vp_width;
+		float vp_height = m_last_vp_height;
+
+		float sx = (mx / vp_width) * 2.0f - 1.0f;
+		float sy = 1.0f - (my / vp_height) * 2.0f;
+
+		const auto& camera = get_app().get_context().get_camera();
+		glm::vec4 screen_pos = { sx, sy, 1.0f, 1.0f };
+
+		glm::mat4x4 view_proj_inv = camera.get_view_inverse() * camera.get_projection_inverse();
+		glm::vec4 world_pos = view_proj_inv * screen_pos;
+
+		return world_pos;
+	}
+
+	void ik_scene::m_mode_changed() {
+		mouse_mode_t new_mode = mouse_mode_t::start_config;
+		switch (m_mouse_tool_id) {
+			case 0: new_mode = mouse_mode_t::start_config; break;
+			case 1: new_mode = mouse_mode_t::end_config; break;
+			case 2: new_mode = mouse_mode_t::obstacle; break;
+		}
+
+		m_mouse_mode = new_mode;
 	}
 
 	void ik_scene::m_length_changed() {

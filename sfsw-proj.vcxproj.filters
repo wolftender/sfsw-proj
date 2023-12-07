@@ -87,6 +87,9 @@
     <ClCompile Include="src\scenes\ik.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\plane.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="inc\app.hpp">
@@ -164,6 +167,9 @@
     <ClInclude Include="inc\scenes\ik.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="inc\plane.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\fs_basic.glsl" />
@@ -187,6 +193,7 @@
     <None Include="shaders\fs_gelcube.glsl" />
     <None Include="shaders\tcs_gelcube.glsl" />
     <None Include="shaders\tes_gelcube.glsl" />
+    <None Include="shaders\vs_basic_tex.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Font Include="opensans.ttf" />

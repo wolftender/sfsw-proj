@@ -2,6 +2,7 @@
 #include "scene.hpp"
 #include "grid.hpp"
 #include "segments.hpp"
+#include "plane.hpp"
 
 namespace mini {
 	class ik_scene : public scene_base {
@@ -28,6 +29,8 @@ namespace mini {
 			struct obstacle_t {
 				glm::vec2 position;
 				glm::vec2 size;
+
+				obstacle_t(): position(0.0f), size(0.0f) { }
 
 				obstacle_t(const glm::vec2& position, const glm::vec2& size) :
 					position(position),
@@ -63,9 +66,17 @@ namespace mini {
 			std::shared_ptr<segments_array> m_robot_arm_start;
 			std::shared_ptr<segments_array> m_robot_arm_end;
 			std::shared_ptr<segments_array> m_robot_arm_curr;
+			std::shared_ptr<plane_object> m_billboard;
 
 			std::unique_ptr<camera> m_old_camera;
 			mouse_mode_t m_mouse_mode;
+
+			std::vector<obstacle_t> m_obstacles;
+			glm::vec2 m_obstacle_start;
+			obstacle_t m_curr_obstacle;
+			bool m_is_adding_obstacle;
+
+			int m_selected_obstacle;
 
 		public:
 			ik_scene(application_base& app);
@@ -78,6 +89,7 @@ namespace mini {
 			virtual void gui() override;
 			virtual void menu() override;
 			virtual void on_mouse_button(int button, int action, int mods) override;
+			virtual void on_key_event(int key, int scancode, int action, int mods) override;
 
 		private:
 			void m_gui_settings();
@@ -93,6 +105,8 @@ namespace mini {
 				std::shared_ptr<segments_array>& arm, 
 				const robot_configuration_t& config);
 
+			glm::vec2 m_get_mouse_world() const;
+			void m_mode_changed();
 			void m_length_changed();
 			void m_solve_start_ik();
 			void m_solve_end_ik();

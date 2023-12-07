@@ -155,6 +155,7 @@
     <ClCompile Include="src\gui.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\mathparse.cpp" />
+    <ClCompile Include="src\plane.cpp" />
     <ClCompile Include="src\scamera.cpp" />
     <ClCompile Include="src\scenes\gel.cpp" />
     <ClCompile Include="src\scenes\ik.cpp" />
@@ -181,6 +182,7 @@
     <ClInclude Include="inc\grid.hpp" />
     <ClInclude Include="inc\gui.hpp" />
     <ClInclude Include="inc\mathparse.hpp" />
+    <ClInclude Include="inc\plane.hpp" />
     <ClInclude Include="inc\scamera.hpp" />
     <ClInclude Include="inc\scene.hpp" />
     <ClInclude Include="inc\scenes\gel.hpp" />
@@ -209,6 +211,7 @@
     <None Include="shaders\tcs_gelcube.glsl" />
     <None Include="shaders\tes_gelcube.glsl" />
     <None Include="shaders\vs_basic.glsl" />
+    <None Include="shaders\vs_basic_tex.glsl" />
     <None Include="shaders\vs_billboard.glsl" />
     <None Include="shaders\vs_billboard_s.glsl" />
     <None Include="shaders\vs_grid.glsl" />

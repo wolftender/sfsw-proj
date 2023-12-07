@@ -31,6 +31,7 @@ namespace mini {
 		m_store.load_shader("point", "shaders/vs_billboard_s.glsl", "shaders/fs_point.glsl");
 		m_store.load_shader("gelcube", "shaders/vs_gelcube.glsl", "shaders/fs_gelcube.glsl", 
 			"shaders/tcs_gelcube.glsl", "shaders/tes_gelcube.glsl");
+		m_store.load_shader("obstacle", "shaders/vs_basic_tex.glsl", "shaders/fs_solidcolor.glsl");
 
 		// load textures
 		m_store.load_texture("slime_albedo", "textures/slime_albedo.png");
@@ -44,6 +45,10 @@ namespace mini {
 	}
 
 	app_context& application::get_context() {
+		return m_context;
+	}
+
+	const app_context& application::get_context() const {
 		return m_context;
 	}
 
@@ -102,7 +107,7 @@ namespace mini {
 		bool rshift_down = is_key_down(GLFW_KEY_RIGHT_SHIFT);
 		bool ctrl_down = is_key_down(GLFW_KEY_LEFT_CONTROL);
 
-		if (ctrl_down && (lshift_down || rshift_down)) {
+		if (ctrl_down && (lshift_down || rshift_down) && action == GLFW_PRESS) {
 			switch (key) {
 				case GLFW_KEY_F1:
 					m_load_scene_spring();
