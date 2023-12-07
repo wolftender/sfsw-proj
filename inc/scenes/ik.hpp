@@ -44,6 +44,7 @@ namespace mini {
 			float m_arm1_len;
 			float m_arm2_len;
 			int m_mouse_tool_id;
+			bool m_alt_solution;
 
 			robot_configuration_t m_start_config;
 			robot_configuration_t m_current_config;
@@ -51,7 +52,11 @@ namespace mini {
 
 			int m_last_vp_width, m_last_vp_height;
 			bool m_mouse_in_viewport, m_viewport_focus;
+		    bool m_is_start_ok, m_is_end_ok;
+
 			offset_t m_vp_mouse_offset;
+
+			glm::vec2 m_start_point, m_end_point;
 
 			// objects
 			std::shared_ptr<grid_object> m_grid;
@@ -88,6 +93,9 @@ namespace mini {
 				std::shared_ptr<segments_array>& arm, 
 				const robot_configuration_t& config);
 
+			void m_length_changed();
+			void m_solve_start_ik();
+			void m_solve_end_ik();
 			bool m_solve_arm_ik(robot_configuration_t& config, float x, float y) const;
 	};
 }

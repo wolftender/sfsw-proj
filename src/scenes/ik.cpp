@@ -17,6 +17,11 @@ namespace mini {
 		m_mouse_mode(mouse_mode_t::start_config),
 		m_vp_mouse_offset{0, 0},
 		m_mouse_tool_id(0),
+		m_end_point{11.0f, 0.0f},
+		m_start_point{0.0f, 11.0f},
+		m_is_start_ok(false),
+		m_is_end_ok(false),
+		m_alt_solution(false),
 		m_viewport_focus(false),
 		m_mouse_in_viewport(false) {
 		
@@ -50,6 +55,9 @@ namespace mini {
 
 		camera->video_mode_change(get_app().get_context().get_video_mode());
 		get_app().get_context().set_camera(std::move(camera));
+
+		m_solve_start_ik();
+		m_solve_end_ik();
 	}
 
 	std::shared_ptr<segments_array> ik_scene::m_build_robot_arm(std::shared_ptr<shader_program> line_shader) const {
@@ -95,7 +103,7 @@ namespace mini {
 		auto arm_model = glm::mat4x4(1.0f);
 		context.draw(m_robot_arm_start, arm_model);
 		context.draw(m_robot_arm_end, arm_model);
-		context.draw(m_robot_arm_curr, arm_model);
+		//context.draw(m_robot_arm_curr, arm_model);
 	}
 
 	void ik_scene::gui() {
@@ -148,24 +156,87 @@ namespace mini {
 		ImGui::SetWindowSize(ImVec2(270, 450), ImGuiCond_Once);
 
 		if (ImGui::CollapsingHeader("Simulation Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
+			bool length_changed = false;
+
 			gui::prefix_label("Arm 1 Len. : ", 250.0f);
-			ImGui::InputFloat("##ik_arm1_len", &m_arm1_len);
+			length_changed = ImGui::InputFloat("##ik_arm1_len", &m_arm1_len) || length_changed;
 
 			gui::prefix_label("Arm 2 Len. : ", 250.0f);
-			ImGui::InputFloat("##ik_arm2_len", &m_arm2_len);
+			length_changed = ImGui::InputFloat("##ik_arm2_len", &m_arm2_len) || length_changed;
 
-			constexpr const char* mouse_modes[] = { "Select Start", "Select End", "Add Obstacle"};
+			if (length_changed) {
+				m_length_changed();
+			}
+
+			gui::prefix_label("Alt. Solution: ", 250.0f);
+			if (ImGui::Checkbox("##ik_alt_sol", &m_alt_solution)) {
+				m_solve_start_ik();
+				m_solve_end_ik();
+			}
+
+			constexpr const char* mouse_modes[] = { "Select Start", "Select End", "Add Obstacle" };
 			gui::prefix_label("Mouse Tool:", 250.0f);
 
 			if (ImGui::Combo("##ik_tool", &m_mouse_tool_id, mouse_modes, 3)) {
 				mouse_mode_t new_mode = mouse_mode_t::start_config;
 				switch (m_mouse_tool_id) {
-					case 0: new_mode = mouse_mode_t::start_config; break;
-					case 1: new_mode = mouse_mode_t::end_config; break;
-					case 3: new_mode = mouse_mode_t::obstacle; break;
+				case 0: new_mode = mouse_mode_t::start_config; break;
+				case 1: new_mode = mouse_mode_t::end_config; break;
+				case 2: new_mode = mouse_mode_t::obstacle; break;
 				}
 
 				m_mouse_mode = new_mode;
+			}
+
+			ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+			if (ImGui::TreeNode("Start Point")) {
+				bool start_changed = false;
+
+				if (!m_is_start_ok) {
+					ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 255));
+					ImGui::Text("This point is incorrect!");
+					ImGui::PopStyleColor();
+				}
+
+				gui::prefix_label("Start X:", 250.0f);
+				start_changed = ImGui::InputFloat("##ik_start_x", &m_start_point.x) || start_changed;
+
+				gui::prefix_label("Start Y:", 250.0f);
+				start_changed = ImGui::InputFloat("##ik_start_y", &m_start_point.y) || start_changed;
+
+				if (start_changed) {
+					m_solve_start_ik();
+				}
+
+				ImGui::TreePop();
+			}
+
+			ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+			if (ImGui::TreeNode("End Point")) {
+				bool end_changed = false;
+
+				if (!m_is_end_ok) {
+					ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 255));
+					ImGui::Text("This point is incorrect!");
+					ImGui::PopStyleColor();
+				}
+
+				gui::prefix_label("End X:", 250.0f);
+				end_changed = ImGui::InputFloat("##ik_end_x", &m_end_point.x) || end_changed;
+
+				gui::prefix_label("End Y:", 250.0f);
+				end_changed = ImGui::InputFloat("##ik_end_y", &m_end_point.y) || end_changed;
+
+				if (end_changed) {
+					m_solve_end_ik();
+				}
+
+				ImGui::TreePop();
+			}
+
+			ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+			if (ImGui::TreeNode("Obstacles")) {
+				ImGui::TreePop();
 			}
 
 			ImGui::NewLine();
@@ -228,11 +299,13 @@ namespace mini {
 	void ik_scene::m_handle_mouse_click(float x, float y) {
 		switch (m_mouse_mode) {
 			case mouse_mode_t::start_config:
-				m_solve_arm_ik(m_start_config, x, y);
+				m_start_point = {x, y};
+				m_solve_start_ik();
 				break;
 
 			case mouse_mode_t::end_config:
-				m_solve_arm_ik(m_end_config, x, y);
+				m_end_point = { x, y };
+				m_solve_end_ik();
 				break;
 
 			case mouse_mode_t::obstacle:
@@ -262,15 +335,16 @@ namespace mini {
 			glm::vec2 v1 = glm::normalize(glm::vec2{ x, y });
 			glm::vec2 v2 = { -v1.y, v1.x };
 
-			glm::vec2 x1_pos1 = cx * v1 + cy1 * v2;
-			glm::vec2 x1_pos2 = cx * v1 + cy2 * v2;
+			glm::vec2 x1_pos = (m_alt_solution) ? 
+				cx * v1 + cy2 * v2 : 
+				cx * v1 + cy1 * v2;
 
-			float alpha = atan2f(x1_pos1.y, x1_pos1.x);
+			float alpha = atan2f(x1_pos.y, x1_pos.x);
 			glm::mat2 M10 = glm::mat2{
 				 cosf(-alpha), sinf(-alpha),
 				-sinf(-alpha), cosf(-alpha)
 			};
-			glm::vec2 x2p = M10 * glm::vec2{ x - x1_pos1.x, y - x1_pos1.y };
+			glm::vec2 x2p = M10 * glm::vec2{ x - x1_pos.x, y - x1_pos.y };
 			float beta = atan2f(x2p.y, x2p.x);
 
 			config.theta1 = -alpha;
@@ -319,5 +393,46 @@ namespace mini {
 		arm->update_point(1, p1);
 		arm->update_point(2, p2);
 		arm->rebuild_buffers();
+	}
+
+	void ik_scene::m_length_changed() {
+		const float l1 = m_arm1_len;
+		const float l2 = m_arm2_len;
+
+		const auto apply_changes = [&](const robot_configuration_t& config) -> glm::vec2 {
+			const float a = config.theta1;
+			const float b = config.theta2;
+
+			const float c1 = glm::cos(a);
+			const float s1 = glm::sin(a);
+			const float c2 = glm::cos(b);
+			const float s2 = glm::sin(b);
+
+			glm::mat3 F01 = {
+				 c1,      s1,      0.0f,
+				-s1,	  c1,      0.0f,
+				 l1 * c1, l1 * s1, 1.0f
+			};
+
+			glm::mat3 F12 = {
+				 c2,      s2,      0.0f,
+				-s2,	  c2,      0.0f,
+				 l2 * c2, l2 * s2, 1.0f
+			};
+
+			glm::vec3 p2 = F01 * F12 * glm::vec3{ 0.0f, 0.0f, 1.0f };
+			return {p2.x, -p2.y};
+		};
+
+		m_start_point = apply_changes(m_start_config);
+		m_end_point = apply_changes(m_end_config);
+	}
+
+	void ik_scene::m_solve_start_ik() {
+		m_is_start_ok = m_solve_arm_ik(m_start_config, m_start_point.x, m_start_point.y);
+	}
+
+	void ik_scene::m_solve_end_ik() {
+		m_is_end_ok = m_solve_arm_ik(m_end_config, m_end_point.x, m_end_point.y);
 	}
 }
