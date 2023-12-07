@@ -25,6 +25,8 @@ namespace mini {
 			GLenum get_mag_filter () const;
 			GLenum get_format () const;
 
+			GLuint get_handle() const;
+
 			texture (uint32_t width, uint32_t height, unsigned char * data);
 			texture (uint32_t width, uint32_t height, unsigned char * data, GLenum format, 
 				unsigned int mipmap_levels = 0, GLenum min_filter = GL_LINEAR, GLenum mag_filter = GL_LINEAR);
@@ -35,6 +37,7 @@ namespace mini {
 			~texture ();
 
 			void bind (GLenum slot = GL_TEXTURE0) const;
+			void update(unsigned char * data);
 
 		private:
 			void m_initialize ();

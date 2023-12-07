@@ -3,6 +3,7 @@
 #include "grid.hpp"
 #include "segments.hpp"
 #include "plane.hpp"
+#include "texture.hpp"
 
 namespace mini {
 	class ik_scene : public scene_base {
@@ -41,8 +42,23 @@ namespace mini {
 					size(w, h) { }
 			};
 
-			uint32_t m_domain_res_x;
-			uint32_t m_domain_res_y;
+			struct configuration_space_t {
+				std::vector<unsigned char> data;
+				std::shared_ptr<mini::texture> texture;
+
+				uint32_t res_x;
+				uint32_t res_y;
+
+				configuration_space_t(uint32_t rx, uint32_t ry);
+				configuration_space_t(configuration_space_t&) = delete;
+				configuration_space_t& operator=(const configuration_space_t&) = delete;
+
+				bool is_collision(int x, int y) const;
+				void set_collision(int x, int y, bool collision);
+				void update_texture();
+			};
+
+			configuration_space_t m_conf;
 
 			float m_arm1_len;
 			float m_arm2_len;
@@ -56,6 +72,7 @@ namespace mini {
 			int m_last_vp_width, m_last_vp_height;
 			bool m_mouse_in_viewport, m_viewport_focus;
 		    bool m_is_start_ok, m_is_end_ok;
+			bool m_is_start_collision, m_is_end_collision;
 
 			offset_t m_vp_mouse_offset;
 
@@ -68,7 +85,7 @@ namespace mini {
 			std::shared_ptr<segments_array> m_robot_arm_curr;
 			std::shared_ptr<plane_object> m_billboard;
 
-			std::unique_ptr<camera> m_old_camera;
+			std::unique_ptr<mini::camera> m_old_camera;
 			mouse_mode_t m_mouse_mode;
 
 			std::vector<obstacle_t> m_obstacles;
@@ -94,6 +111,7 @@ namespace mini {
 		private:
 			void m_gui_settings();
 			void m_gui_viewport();
+			void m_gui_parameters();
 			
 			void m_handle_mouse_click(float x, float y);
 			void m_handle_mouse_release(float x, float y);
@@ -106,6 +124,11 @@ namespace mini {
 				const robot_configuration_t& config);
 
 			glm::vec2 m_get_mouse_world() const;
+
+			inline bool m_collides(float alpha, float beta) const;
+
+			void m_check_collisions();
+			void m_rebuild_configuration();
 			void m_mode_changed();
 			void m_length_changed();
 			void m_solve_start_ik();

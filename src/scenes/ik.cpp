@@ -6,10 +6,96 @@
 #include "scenes/ik.hpp"
 
 namespace mini {
+	inline bool intersect_segment(
+		float x1, float y1,
+		float x2, float y2,
+		float x3, float y3,
+		float x4, float y4,
+		float& t, float& u) {
+
+		float den = ((x1 - x2) * (y3 - y4)) - ((y1 - y2) * (x3 - x4));
+
+		if (den == 0.0f) {
+			t = u = 0.0f;
+			return false;
+		}
+
+		float num_t = ((x1 - x3) * (y3 - y4)) - ((y1 - y3) * (x3 - x4));
+		float num_u = ((x1 - x3) * (y1 - y2)) - ((y1 - y3) * (x1 - x2));
+
+		// 0 < num_t/den < 1
+		if (num_t * den < 0.0f || num_u * den < 0.0f) {
+			t = u = 0.0f;
+			return false;
+		}
+
+		num_u = fabsf(num_u);
+		num_t = fabsf(num_t);
+		den = fabsf(den);
+
+		if (num_u > den || num_t > den) {
+			t = u = 0.0f;
+			return false;
+		}
+
+		t = num_t / den;
+		u = num_u / den;
+
+		return true;
+	}
+
+	inline bool intersect_segment(
+		const glm::vec2& s1,
+		const glm::vec2& e1,
+		const glm::vec2& s2,
+		const glm::vec2& e2,
+		glm::vec2& p
+	) {
+		float t, u;
+		if (!intersect_segment(s1.x, s1.y, e1.x, e1.y, s2.x, s2.y, e2.x, e2.y, t, u)) {
+			return false;
+		}
+
+		p = glm::mix(s1, e1, t);
+		return true;
+	}
+
+	ik_scene::configuration_space_t::configuration_space_t(uint32_t rx, uint32_t ry) {
+		res_x = rx;
+		res_y = ry;
+
+		data.resize(rx * ry * 3);
+		std::fill(data.begin(), data.end(), 0);
+
+		texture = std::make_shared<mini::texture>(res_x, res_y, data.data(), GL_RGB);
+	}
+
+	bool ik_scene::configuration_space_t::is_collision(int x, int y) const {
+		int index = y * res_x + x;
+		int base = 3 * index;
+
+		return (data[index + 0] != 0);
+	}
+
+	void ik_scene::configuration_space_t::set_collision(int x, int y, bool collision) {
+		int index = y * res_x + x;
+		int base = 3 * index;
+
+		unsigned char val = (collision) ? 255 : 0;
+		unsigned char inv = (collision) ? 0 : 255;
+
+		data[base + 0] = val;
+		data[base + 1] = inv;
+		data[base + 2] = 0;
+	}
+
+	void ik_scene::configuration_space_t::update_texture() {
+		texture->update(data.data());
+	}
+
 	ik_scene::ik_scene(application_base& app) : 
 		scene_base(app),
-		m_domain_res_x(360),
-		m_domain_res_y(360),
+		m_conf(360, 360),
 		m_arm1_len(5.0f),
 		m_arm2_len(6.0f),
 		m_last_vp_height(0),
@@ -21,6 +107,8 @@ namespace mini {
 		m_end_point{11.0f, 0.0f},
 		m_start_point{0.0f, 11.0f},
 		m_selected_obstacle(-1),
+		m_is_start_collision(false),
+		m_is_end_collision(false),
 		m_is_start_ok(false),
 		m_is_end_ok(false),
 		m_alt_solution(false),
@@ -66,6 +154,8 @@ namespace mini {
 
 		m_solve_start_ik();
 		m_solve_end_ik();
+
+		m_rebuild_configuration();
 	}
 
 	std::shared_ptr<segments_array> ik_scene::m_build_robot_arm(std::shared_ptr<shader_program> line_shader) const {
@@ -86,6 +176,7 @@ namespace mini {
 
 		ImGui::DockBuilderDockWindow("Inverse Kinematics", dockspace_id);
 		ImGui::DockBuilderDockWindow("Simulation Settings", dock_id_right);
+		ImGui::DockBuilderDockWindow("Configuration Space", dock_id_right);
 	}
 
 	void ik_scene::integrate(float delta_time) {
@@ -112,6 +203,8 @@ namespace mini {
 			m_curr_obstacle.position = {min_x, min_y};
 			m_curr_obstacle.size = {width, height};
 		}
+
+		m_check_collisions();
 	}
 
 	void ik_scene::render(app_context& context) {
@@ -159,6 +252,7 @@ namespace mini {
 
 	void ik_scene::gui() {
 		m_gui_settings();
+		m_gui_parameters();
 		m_gui_viewport();
 	}
 
@@ -236,6 +330,12 @@ namespace mini {
 					ImGui::PopStyleColor();
 				}
 
+				if (m_is_start_collision) {
+					ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 255));
+					ImGui::Text("This configuration is colliding!");
+					ImGui::PopStyleColor();
+				}
+
 				gui::prefix_label("Start X:", 250.0f);
 				start_changed = ImGui::InputFloat("##ik_start_x", &m_start_point.x) || start_changed;
 
@@ -256,6 +356,12 @@ namespace mini {
 				if (!m_is_end_ok) {
 					ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 255));
 					ImGui::Text("This point is incorrect!");
+					ImGui::PopStyleColor();
+				}
+
+				if (m_is_end_collision) {
+					ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 255));
+					ImGui::Text("This configuration is colliding!");
 					ImGui::PopStyleColor();
 				}
 
@@ -379,6 +485,26 @@ namespace mini {
 		ImGui::PopStyleVar(1);
 	}
 
+	void ik_scene::m_gui_parameters() {
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(270, 450));
+		ImGui::Begin("Configuration Space", NULL);
+		ImGui::SetWindowPos(ImVec2(30, 30), ImGuiCond_Once);
+		ImGui::SetWindowSize(ImVec2(270, 450), ImGuiCond_Once);
+
+		auto min = ImGui::GetWindowContentRegionMin();
+		auto max = ImGui::GetWindowContentRegionMax();
+		auto window_pos = ImGui::GetWindowPos();
+
+		int width = static_cast<int> (max.x - min.x);
+		int height = static_cast<int> (max.y - min.y);
+
+		ImGui::ImageButton(reinterpret_cast<ImTextureID> (
+			m_conf.texture->get_handle()), ImVec2(width, width), ImVec2(0, 0), ImVec2(1, 1), 0);
+
+		ImGui::End();
+		ImGui::PopStyleVar(1);
+	}
+
 	void ik_scene::m_handle_mouse_click(float x, float y) {
 		switch (m_mouse_mode) {
 			case mouse_mode_t::start_config:
@@ -404,6 +530,8 @@ namespace mini {
 		if (m_is_adding_obstacle) {
 			m_obstacles.push_back(m_curr_obstacle);
 			m_is_adding_obstacle = false;
+
+			m_rebuild_configuration();
 		}
 	}
 
@@ -505,6 +633,68 @@ namespace mini {
 		return world_pos;
 	}
 
+	inline bool ik_scene::m_collides(float alpha, float beta) const {
+		const float l1 = m_arm1_len;
+		const float l2 = m_arm2_len;
+
+		const glm::vec2 p0 = { 0.0f, 0.0f };
+		const glm::vec2 p1 = { l1 * cosf(alpha), l1 * sinf(alpha) };
+		const glm::vec2 p2 = {
+			l2 * cosf(alpha + beta) + l1 * cosf(alpha),
+			l2 * sinf(alpha + beta) + l1 * sinf(alpha),
+		};
+
+		bool collision = false;
+		for (const auto& obstacle : m_obstacles) {
+			const glm::vec2 q1 = { obstacle.position.x, -obstacle.position.y };
+			const glm::vec2 q2 = { q1.x + obstacle.size.x, q1.y };
+			const glm::vec2 q3 = { q1.x + obstacle.size.x, q1.y - obstacle.size.y };
+			const glm::vec2 q4 = { q1.x, q1.y - obstacle.size.y };
+			glm::vec2 _r;
+
+			collision = collision || intersect_segment(p0, p1, q1, q2, _r);
+			collision = collision || intersect_segment(p0, p1, q2, q3, _r);
+			collision = collision || intersect_segment(p0, p1, q3, q4, _r);
+			collision = collision || intersect_segment(p0, p1, q4, q1, _r);
+
+			collision = collision || intersect_segment(p1, p2, q1, q2, _r);
+			collision = collision || intersect_segment(p1, p2, q2, q3, _r);
+			collision = collision || intersect_segment(p1, p2, q3, q4, _r);
+			collision = collision || intersect_segment(p1, p2, q4, q1, _r);
+
+			if (collision) {
+				break;
+			}
+		}
+
+		return collision;
+	}
+
+	void ik_scene::m_check_collisions() {
+		m_is_start_collision = m_collides(m_start_config.theta1, m_start_config.theta2);
+		m_is_end_collision = m_collides(m_end_config.theta1, m_end_config.theta2);
+	}
+
+	void ik_scene::m_rebuild_configuration() {
+		m_check_collisions();
+
+		constexpr float pi = glm::pi<float>();
+		const float step_x = 2.0f * pi / static_cast<float>(m_conf.res_x);
+		const float step_y = 2.0f * pi / static_cast<float>(m_conf.res_y);
+
+		for (int x = 0; x < m_conf.res_x; ++x) {
+			for (int y = 0; y < m_conf.res_y; ++y) {
+				const float alpha = step_x * x - pi;
+				const float beta = step_y * y - pi;
+
+				auto collision = m_collides(alpha, beta);
+				m_conf.set_collision(x, y, collision);
+			}
+		}
+
+		m_conf.update_texture();
+	}
+
 	void ik_scene::m_mode_changed() {
 		mouse_mode_t new_mode = mouse_mode_t::start_config;
 		switch (m_mouse_tool_id) {
@@ -547,13 +737,16 @@ namespace mini {
 
 		m_start_point = apply_changes(m_start_config);
 		m_end_point = apply_changes(m_end_config);
+		m_rebuild_configuration();
 	}
 
 	void ik_scene::m_solve_start_ik() {
 		m_is_start_ok = m_solve_arm_ik(m_start_config, m_start_point.x, m_start_point.y);
+		m_check_collisions();
 	}
 
 	void ik_scene::m_solve_end_ik() {
 		m_is_end_ok = m_solve_arm_ik(m_end_config, m_end_point.x, m_end_point.y);
+		m_check_collisions();
 	}
 }

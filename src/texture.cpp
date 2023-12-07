@@ -31,6 +31,10 @@ namespace mini {
 		return m_format;
 	}
 
+	GLuint texture::get_handle() const {
+		return m_texture;
+	}
+
 	texture::texture (uint32_t width, uint32_t height, unsigned char * data) {
 		m_width = width;
 		m_height = height;
@@ -84,6 +88,18 @@ namespace mini {
 	void texture::bind (GLenum slot) const {
 		glActiveTexture (slot);
 		glBindTexture (GL_TEXTURE_2D, m_texture);
+	}
+
+	void texture::update(unsigned char* data) {
+		glBindTexture(GL_TEXTURE_2D, m_texture);
+		glTexSubImage2D(
+			GL_TEXTURE_2D,
+			0, 0, 0, m_width, m_height,
+			GL_RGB,
+			GL_UNSIGNED_BYTE,
+			data);
+
+		glBindTexture(GL_TEXTURE_2D, 0);
 	}
 
 	void texture::m_initialize () {
