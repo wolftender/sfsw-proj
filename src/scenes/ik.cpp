@@ -237,7 +237,7 @@ namespace mini {
 
 		path.resize(inv_path.size());
 		int i = 0;
-		for (auto it = inv_path.rend(); it != inv_path.rbegin(); ++it) {
+		for (auto it = inv_path.rbegin(); it != inv_path.rend(); ++it) {
 			path[i++] = convert_to_config(*it);
 		}
 
@@ -264,9 +264,11 @@ namespace mini {
 		m_show_path_error(false),
 		m_is_start_ok(false),
 		m_is_end_ok(false),
+		m_loop_animation(false),
 		m_alt_solution(false),
 		m_viewport_focus(false),
-		m_mouse_in_viewport(false) {
+		m_mouse_in_viewport(false),
+		m_animation_playing(false) {
 		
 		app.get_context().set_clear_color({ 0.95f, 0.95f, 0.95f });
 
@@ -282,6 +284,9 @@ namespace mini {
 			m_robot_arm_start = m_build_robot_arm(line_shader);
 			m_robot_arm_end = m_build_robot_arm(line_shader);
 			m_robot_arm_curr = m_build_robot_arm(line_shader);
+
+			m_robot_arm_start->set_color({ 0.85f, 0.3f, 0.3f, 1.0f });
+			m_robot_arm_end->set_color({ 0.3f, 0.3f, 0.85f, 1.0f });
 		}
 
 		if (billboard_shader) {
@@ -357,6 +362,25 @@ namespace mini {
 			m_curr_obstacle.size = {width, height};
 		}
 
+		if (m_animation_playing) {
+			if (m_path.size() == 0) {
+				m_animation_playing = false;
+			}
+
+			m_animation_timer += 0.25f * delta_time;
+			if (m_animation_timer >= 1.0f) {
+				if (m_loop_animation) {
+					m_animation_timer = 0.0f;
+				} else {
+					m_animation_playing = false;
+					m_animation_timer = 1.0f;
+				}
+			}
+
+			int anim_frame = static_cast<int>(m_animation_timer * static_cast<float>(m_path.size() - 1));
+			m_current_config = m_path[anim_frame];
+		}
+
 		m_check_collisions();
 	}
 
@@ -400,7 +424,10 @@ namespace mini {
 		auto arm_model = glm::mat4x4(1.0f);
 		context.draw(m_robot_arm_start, arm_model);
 		context.draw(m_robot_arm_end, arm_model);
-		//context.draw(m_robot_arm_curr, arm_model);
+		
+		if (m_animation_playing) {
+			context.draw(m_robot_arm_curr, arm_model);
+		}
 	}
 
 	void ik_scene::gui() {
@@ -531,11 +558,36 @@ namespace mini {
 				ImGui::TreePop();
 			}
 
-			if (ImGui::Button("Find Path")) {
-				std::vector<robot_configuration_t> path;
+			ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+			if (ImGui::TreeNode("Pathfinding")) {
+				gui::prefix_label("Loop Anim. :", 250.0f);
+				ImGui::Checkbox("##ik_loop_anim", &m_loop_animation);
+				ImGui::NewLine();
 
-				m_rebuild_configuration();
-				m_show_path_error = !m_conf.find_path(m_start_config, m_end_config, path);
+				if (ImGui::Button("Find Path")) {
+					m_rebuild_configuration();
+					m_show_path_error = !m_conf.find_path(m_start_config, m_end_config, m_path);
+
+					if (!m_show_path_error) {
+						m_animation_playing = true;
+						m_animation_timer = 0.0f;
+					}
+				}
+
+				ImGui::SameLine();
+				if (ImGui::Button("Play Anim")) {
+					if (m_path.size() > 0) {
+						m_animation_playing = true;
+						m_animation_timer = 0.0f;
+					}
+				}
+
+				ImGui::SameLine();
+				if (ImGui::Button("Stop Anim")) {
+					m_animation_playing = false;
+				}
+
+				ImGui::TreePop();
 			}
 
 			if (m_show_path_error) {
@@ -844,6 +896,8 @@ namespace mini {
 
 	void ik_scene::m_rebuild_configuration() {
 		m_conf.clear_texture();
+		m_path.clear();
+
 		m_check_collisions();
 
 		constexpr float pi = glm::pi<float>();

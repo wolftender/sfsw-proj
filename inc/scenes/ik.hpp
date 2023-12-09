@@ -81,6 +81,7 @@ namespace mini {
 		    bool m_is_start_ok, m_is_end_ok;
 			bool m_is_start_collision, m_is_end_collision;
 			bool m_show_path_error;
+			bool m_loop_animation;
 
 			offset_t m_vp_mouse_offset;
 
@@ -104,6 +105,8 @@ namespace mini {
 			int m_selected_obstacle;
 
 			std::vector<robot_configuration_t> m_path;
+			bool m_animation_playing;
+			float m_animation_timer;
 
 		public:
 			ik_scene(application_base& app);
