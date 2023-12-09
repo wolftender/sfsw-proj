@@ -44,18 +44,25 @@ namespace mini {
 
 			struct configuration_space_t {
 				std::vector<unsigned char> data;
+				std::vector<int> dist;
+
 				std::shared_ptr<mini::texture> texture;
 
-				uint32_t res_x;
-				uint32_t res_y;
+				int res_x;
+				int res_y;
 
-				configuration_space_t(uint32_t rx, uint32_t ry);
+				configuration_space_t(int rx, int ry);
 				configuration_space_t(configuration_space_t&) = delete;
 				configuration_space_t& operator=(const configuration_space_t&) = delete;
 
 				bool is_collision(int x, int y) const;
 				void set_collision(int x, int y, bool collision);
 				void update_texture();
+				void clear_texture();
+				bool find_path(
+					const robot_configuration_t& start, 
+					const robot_configuration_t& end, 
+					std::vector<robot_configuration_t>& path);
 			};
 
 			configuration_space_t m_conf;
@@ -73,6 +80,7 @@ namespace mini {
 			bool m_mouse_in_viewport, m_viewport_focus;
 		    bool m_is_start_ok, m_is_end_ok;
 			bool m_is_start_collision, m_is_end_collision;
+			bool m_show_path_error;
 
 			offset_t m_vp_mouse_offset;
 
@@ -94,6 +102,8 @@ namespace mini {
 			bool m_is_adding_obstacle;
 
 			int m_selected_obstacle;
+
+			std::vector<robot_configuration_t> m_path;
 
 		public:
 			ik_scene(application_base& app);

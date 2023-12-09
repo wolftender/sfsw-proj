@@ -1,4 +1,5 @@
 #include <iostream>
+#include <deque>
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "gui.hpp"
@@ -60,7 +61,7 @@ namespace mini {
 		return true;
 	}
 
-	ik_scene::configuration_space_t::configuration_space_t(uint32_t rx, uint32_t ry) {
+	ik_scene::configuration_space_t::configuration_space_t(int rx, int ry) {
 		res_x = rx;
 		res_y = ry;
 
@@ -74,7 +75,7 @@ namespace mini {
 		int index = y * res_x + x;
 		int base = 3 * index;
 
-		return (data[index + 0] != 0);
+		return (data[base + 0] != 0);
 	}
 
 	void ik_scene::configuration_space_t::set_collision(int x, int y, bool collision) {
@@ -82,15 +83,166 @@ namespace mini {
 		int base = 3 * index;
 
 		unsigned char val = (collision) ? 255 : 0;
-		unsigned char inv = (collision) ? 0 : 255;
-
 		data[base + 0] = val;
-		data[base + 1] = inv;
-		data[base + 2] = 0;
 	}
 
 	void ik_scene::configuration_space_t::update_texture() {
 		texture->update(data.data());
+	}
+
+	void ik_scene::configuration_space_t::clear_texture() {
+		std::fill(data.begin(), data.end(), 0);
+	}
+
+	bool ik_scene::configuration_space_t::find_path(
+		const robot_configuration_t& start, 
+		const robot_configuration_t& end, 
+		std::vector<robot_configuration_t>& path) {
+		
+		if (dist.size() != res_x * res_y) {
+			dist.resize(res_x * res_y);
+		}
+
+		constexpr int INF_DIST = 999999;
+		std::fill(dist.begin(), dist.end(), INF_DIST);
+
+		const auto config_to_coords = [&](const robot_configuration_t & config) -> std::pair<int, int> {
+			constexpr float pi = glm::pi<float>();
+			float alpha = 0.5f * (config.theta1 + pi) / pi;
+			float beta = 0.5f * (config.theta2 + pi) / pi;
+
+			int x = static_cast<int>(roundf(alpha * res_x));
+			int y = static_cast<int>(roundf(beta * res_y));
+
+			return {x,y};
+		};
+
+		const auto add_wrapped = [&](const std::pair<int, int>& cell, int dx, int dy) -> std::pair<int, int> {
+			std::pair<int,int> val = cell;
+
+			val.first += dx;
+			val.second += dy;
+
+			if (val.first >= res_x) {
+				val.first = val.first % res_x;
+			} else if (val.first < 0) {
+				val.first = res_x + (val.first % res_x);
+			}
+
+			if (val.second >= res_y) {
+				val.second = val.second % res_y;
+			} else if (val.second < 0) {
+				val.second = res_y + (val.second % res_y);
+			}
+
+			return val;
+		};
+
+		auto start_cell = config_to_coords(start);
+		auto end_cell = config_to_coords(end);
+
+		std::deque<std::pair<int,int>> s;
+		s.push_back(start_cell);
+
+		int idx_start = start_cell.second * res_x + start_cell.first;
+		int idx_end = end_cell.second * res_x + end_cell.first;
+
+		dist[idx_start] = 0;
+
+		const auto handle_neighbor = [&](const std::pair<int, int>& cell, const std::pair<int, int>& neighbor) -> void {
+			if (is_collision(neighbor.first, neighbor.second)) {
+				return;
+			}
+
+			int idx1 = cell.second * res_x + cell.first;
+			int idx2 = neighbor.second * res_x + neighbor.first;
+
+			int d = dist[idx1] + 1;
+			if (dist[idx2] > d) {
+				dist[idx2] = d;
+				s.push_front(neighbor);
+
+				data[3*idx2 + 1] = glm::min(d,255);
+			}
+		};
+
+		while (!s.empty()) {
+			auto current = s.back();
+			s.pop_back();
+
+			auto up = add_wrapped(current, 0, -1);
+			auto down = add_wrapped(current, 0, 1);
+			auto left = add_wrapped(current, -1, 0);
+			auto right = add_wrapped(current, 1, 0);
+
+			handle_neighbor(current, up);
+			handle_neighbor(current, down);
+			handle_neighbor(current, left);
+			handle_neighbor(current, right);
+		}
+
+		const auto convert_to_config = [&](const std::pair<int, int>& cell) -> robot_configuration_t {
+			constexpr float pi = glm::pi<float>();
+			const float rx = static_cast<float>(res_x);
+			const float ry = static_cast<float>(res_y);
+			const float fx = static_cast<float>(cell.first);
+			const float fy = static_cast<float>(cell.second);
+			const float alpha = ((fx / rx) * 2.0f * pi) - pi;
+			const float beta = ((fy / ry) * 2.0f * pi) - pi;
+
+			return {alpha, beta};
+		};
+
+		std::vector<std::pair<int,int>> inv_path;
+		auto curr = end_cell;
+
+		inv_path.push_back(curr);
+		while (curr != start_cell) {
+			int idx = curr.second * res_x + curr.first;
+			if (dist[idx] >= INF_DIST) {
+				return false;
+			}
+
+			auto up = add_wrapped(curr, 0, -1);
+			auto down = add_wrapped(curr, 0, 1);
+			auto left = add_wrapped(curr, -1, 0);
+			auto right = add_wrapped(curr, 1, 0);
+
+			int up_idx = up.second * res_x + up.first;
+			int down_idx = down.second * res_x + down.first;
+			int left_idx = left.second * res_x + left.first;
+			int right_idx = right.second * res_x + right.first;
+
+			int d = dist[idx];
+			if (dist[up_idx] == d - 1) {
+				curr = up;
+				data[3 * up_idx + 2] = 255;
+				inv_path.push_back(curr);
+			} else if (dist[down_idx] == d - 1) {
+				curr = down;
+				data[3 * down_idx + 2] = 255;
+				inv_path.push_back(curr);
+			} else if (dist[left_idx] == d - 1) {
+				curr = left;
+				data[3 * left_idx + 2] = 255;
+				inv_path.push_back(curr);
+			} else if (dist[right_idx] == d - 1) {
+				curr = right;
+				data[3 * right_idx + 2] = 255;
+				inv_path.push_back(curr);
+			} else {
+				return false;
+			}
+		}
+
+		path.resize(inv_path.size());
+		int i = 0;
+		for (auto it = inv_path.rend(); it != inv_path.rbegin(); ++it) {
+			path[i++] = convert_to_config(*it);
+		}
+
+		update_texture();
+		return true;
 	}
 
 	ik_scene::ik_scene(application_base& app) : 
@@ -109,6 +261,7 @@ namespace mini {
 		m_selected_obstacle(-1),
 		m_is_start_collision(false),
 		m_is_end_collision(false),
+		m_show_path_error(false),
 		m_is_start_ok(false),
 		m_is_end_ok(false),
 		m_alt_solution(false),
@@ -378,6 +531,19 @@ namespace mini {
 				ImGui::TreePop();
 			}
 
+			if (ImGui::Button("Find Path")) {
+				std::vector<robot_configuration_t> path;
+
+				m_rebuild_configuration();
+				m_show_path_error = !m_conf.find_path(m_start_config, m_end_config, path);
+			}
+
+			if (m_show_path_error) {
+				ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 255));
+				ImGui::Text("There is no path between given configurations!");
+				ImGui::PopStyleColor();
+			}
+
 			ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 			if (ImGui::TreeNode("Obstacles")) {
 				if (ImGui::BeginListBox("##objectlist", ImVec2(-1.0f, 200.0f))) {
@@ -416,6 +582,7 @@ namespace mini {
 
 				if (ImGui::Button("Delete", ImVec2(-1.0f, 24.0f))) {
 					m_obstacles.erase(m_obstacles.begin() + m_selected_obstacle);
+					m_rebuild_configuration();
 					m_selected_obstacle = -1;
 					deleted = true;
 				}
@@ -676,6 +843,7 @@ namespace mini {
 	}
 
 	void ik_scene::m_rebuild_configuration() {
+		m_conf.clear_texture();
 		m_check_collisions();
 
 		constexpr float pi = glm::pi<float>();
