@@ -70,7 +70,7 @@ namespace mini {
 			float m_arm1_len;
 			float m_arm2_len;
 			int m_mouse_tool_id;
-			bool m_alt_solution;
+			bool m_alt_solution_start, m_alt_solution_end;
 
 			robot_configuration_t m_start_config;
 			robot_configuration_t m_current_config;
@@ -146,6 +146,6 @@ namespace mini {
 			void m_length_changed();
 			void m_solve_start_ik();
 			void m_solve_end_ik();
-			bool m_solve_arm_ik(robot_configuration_t& config, float x, float y) const;
+			bool m_solve_arm_ik(robot_configuration_t& config, float x, float y, bool alt) const;
 	};
 }

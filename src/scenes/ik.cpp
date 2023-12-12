@@ -265,7 +265,8 @@ namespace mini {
 		m_is_start_ok(false),
 		m_is_end_ok(false),
 		m_loop_animation(false),
-		m_alt_solution(false),
+		m_alt_solution_start(false),
+		m_alt_solution_end(false),
 		m_viewport_focus(false),
 		m_mouse_in_viewport(false),
 		m_animation_playing(false) {
@@ -487,8 +488,14 @@ namespace mini {
 				m_length_changed();
 			}
 
-			gui::prefix_label("Alt. Solution: ", 250.0f);
-			if (ImGui::Checkbox("##ik_alt_sol", &m_alt_solution)) {
+			gui::prefix_label("Alt. Solution S. : ", 250.0f);
+			if (ImGui::Checkbox("##ik_alt_sol_s", &m_alt_solution_start)) {
+				m_solve_start_ik();
+				m_solve_end_ik();
+			}
+
+			gui::prefix_label("Alt. Solution E. : ", 250.0f);
+			if (ImGui::Checkbox("##ik_alt_sol_e", &m_alt_solution_end)) {
 				m_solve_start_ik();
 				m_solve_end_ik();
 			}
@@ -628,6 +635,19 @@ namespace mini {
 				if (m_selected_obstacle < 0) {
 					ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
 					ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);					
+				} else {
+					auto& obstacle = m_obstacles[m_selected_obstacle];
+					gui::prefix_label("Obstacle X:", 250.0f);
+					ImGui::SliderFloat("##ik_obstacle_x", &obstacle.position.x, -20.0f, 20.0f);
+					gui::prefix_label("Obstacle Y:", 250.0f);
+					ImGui::SliderFloat("##ik_obstacle_y", &obstacle.position.y, -20.0f, 20.0f);
+					gui::prefix_label("Obstacle Width:", 250.0f);
+					ImGui::SliderFloat("##ik_obstacle_w", &obstacle.size.x, 0.1f, 20.0f);
+					gui::prefix_label("Obstacle Height:", 250.0f);
+					ImGui::SliderFloat("##ik_obstacle_h", &obstacle.size.y, 0.1f, 20.0f);
+
+					obstacle.size.x = glm::max(0.1f, obstacle.size.x);
+					obstacle.size.y = glm::max(0.1f, obstacle.size.y);
 				}
 
 				bool deleted = false;
@@ -754,7 +774,7 @@ namespace mini {
 		}
 	}
 
-	bool ik_scene::m_solve_arm_ik(robot_configuration_t& config, float x, float y) const {
+	bool ik_scene::m_solve_arm_ik(robot_configuration_t& config, float x, float y, bool alt) const {
 		float l1 = m_arm1_len;
 		float l2 = m_arm2_len;
 
@@ -773,7 +793,7 @@ namespace mini {
 			glm::vec2 v1 = glm::normalize(glm::vec2{ x, y });
 			glm::vec2 v2 = { -v1.y, v1.x };
 
-			glm::vec2 x1_pos = (m_alt_solution) ? 
+			glm::vec2 x1_pos = (alt) ? 
 				cx * v1 + cy2 * v2 : 
 				cx * v1 + cy1 * v2;
 
@@ -963,12 +983,12 @@ namespace mini {
 	}
 
 	void ik_scene::m_solve_start_ik() {
-		m_is_start_ok = m_solve_arm_ik(m_start_config, m_start_point.x, m_start_point.y);
+		m_is_start_ok = m_solve_arm_ik(m_start_config, m_start_point.x, m_start_point.y, m_alt_solution_start);
 		m_check_collisions();
 	}
 
 	void ik_scene::m_solve_end_ik() {
-		m_is_end_ok = m_solve_arm_ik(m_end_config, m_end_point.x, m_end_point.y);
+		m_is_end_ok = m_solve_arm_ik(m_end_config, m_end_point.x, m_end_point.y, m_alt_solution_end);
 		m_check_collisions();
 	}
 }
