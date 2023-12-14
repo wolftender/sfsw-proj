@@ -205,6 +205,7 @@
     <None Include="shaders\fs_grid_xz.glsl" />
     <None Include="shaders\fs_point.glsl" />
     <None Include="shaders\fs_shaded.glsl" />
+    <None Include="shaders\fs_shaded_room.glsl" />
     <None Include="shaders\fs_solidcolor.glsl" />
     <None Include="shaders\fs_white.glsl" />
     <None Include="shaders\gs_lines.glsl" />

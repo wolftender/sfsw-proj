@@ -296,7 +296,7 @@ namespace mini {
 		m_wireframe_mode(false) {
 
 		auto line_shader = get_app().get_store().get_shader("line");
-		auto cube_shader = get_app().get_store().get_shader("cube");
+		auto room_shader = get_app().get_store().get_shader("room");
 		auto grid_shader = get_app().get_store().get_shader("grid_xz");
 		auto point_shader = get_app().get_store().get_shader("point");
 		auto gel_shader = get_app().get_store().get_shader("gelcube");
@@ -328,6 +328,11 @@ namespace mini {
 			m_soft_object = std::make_shared<bezier_cube>(gel_shader);
 			m_soft_object->set_albedo_map(slime_albedo);
 			m_soft_object->set_normal_map(slime_normal);
+		}
+
+		if (room_shader) {
+			m_bounds_object = std::make_shared<cube_object>(room_shader);
+			m_bounds_object->set_cull_mode(cube_object::culling_mode_t::front);
 		}
 
 		auto camera = std::make_unique<default_camera>();
@@ -364,11 +369,6 @@ namespace mini {
 		light.position = { -5.0f, -5.0f, -5.0f };
 		light.att_const = 1.0f;
 
-		if (m_grid) {
-			auto grid_model = glm::mat4x4(1.0f);
-			context.draw(m_grid, grid_model);
-		}
-
 		if (m_springs_object && m_show_springs) {
 			auto springs_model = glm::mat4x4(1.0f);
 
@@ -403,6 +403,19 @@ namespace mini {
 			m_soft_object->refresh_buffer();
 
 			context.draw(m_soft_object, bezier_model);
+		}
+
+		if (m_grid) {
+			auto grid_model = glm::mat4x4(1.0f);
+			context.draw(m_grid, grid_model);
+		}
+
+		if (m_bounds_object) {
+			float half_width = m_state.settings.bounds_width * 0.5f;
+			float half_height = m_state.settings.bounds_height * 0.5f;
+
+			auto bounds_model = glm::scale(glm::mat4(1.0f), glm::vec3{half_width, half_height, half_width});
+			context.draw(m_bounds_object, bounds_model);
 		}
 	}
 
@@ -491,6 +504,12 @@ namespace mini {
 
 			gui::prefix_label("Gravity Force: ", 250.0f);
 			ImGui::InputFloat("##gel_gravity_f", &m_settings.gravity);
+
+			gui::prefix_label("Bound Width: ", 250.0f);
+			ImGui::InputFloat("##gel_bound_w", &m_settings.bounds_width);
+
+			gui::prefix_label("Bound Height: ", 250.0f);
+			ImGui::InputFloat("##gel_bound_h", &m_settings.bounds_height);
 
 			gui::prefix_label("Point Mass: ", 250.0f);
 			ImGui::InputFloat("##gel_point_mass", &m_settings.mass);

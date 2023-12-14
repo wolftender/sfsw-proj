@@ -27,6 +27,7 @@ namespace mini {
 		m_store.load_shader("billboard_s", "shaders/vs_billboard_s.glsl", "shaders/fs_billboard.glsl");
 		m_store.load_shader("line", "shaders/vs_basic.glsl", "shaders/fs_solidcolor.glsl", "shaders/gs_lines.glsl");
 		m_store.load_shader("cube", "shaders/vs_shaded.glsl", "shaders/fs_shaded.glsl");
+		m_store.load_shader("room", "shaders/vs_shaded.glsl", "shaders/fs_shaded_room.glsl");
 		m_store.load_shader("gizmo", "shaders/vs_position.glsl", "shaders/fs_solidcolor.glsl");
 		m_store.load_shader("point", "shaders/vs_billboard_s.glsl", "shaders/fs_point.glsl");
 		m_store.load_shader("gelcube", "shaders/vs_gelcube.glsl", "shaders/fs_gelcube.glsl", 
@@ -37,7 +38,7 @@ namespace mini {
 		m_store.load_texture("slime_albedo", "textures/slime_albedo.png");
 		m_store.load_texture("slime_normal", "textures/slime_normal.png");
 
-		m_scene = std::make_unique<ik_scene>(*this);
+		m_scene = std::make_unique<gel_scene>(*this);
 	}
 
 	scene_base& application::get_scene() {

@@ -194,6 +194,7 @@
     <None Include="shaders\tcs_gelcube.glsl" />
     <None Include="shaders\tes_gelcube.glsl" />
     <None Include="shaders\vs_basic_tex.glsl" />
+    <None Include="shaders\fs_shaded_room.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Font Include="opensans.ttf" />

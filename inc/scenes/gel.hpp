@@ -11,6 +11,7 @@
 #include "billboard.hpp"
 #include "segments.hpp"
 #include "beziercube.hpp"
+#include "cube.hpp"
 
 namespace mini {
 	class gel_scene : public scene_base {
@@ -58,6 +59,8 @@ namespace mini {
 				float frame_coefficient;
 				float integration_step;
 				float frame_length;
+				float bounds_width;
+				float bounds_height;
 
 				solver_type_t solver_type;
 				bool enable_gravity;
@@ -71,6 +74,8 @@ namespace mini {
 					frame_coefficient(2.0f),
 					integration_step(0.017f),
 					frame_length(3.2f),
+					bounds_width(8.0f),
+					bounds_height(8.0f),
 					solver_type(solver_type_t::euler),
 					enable_gravity(false) { }
 			};
@@ -117,6 +122,7 @@ namespace mini {
 			std::shared_ptr<segments_array> m_springs_object;
 			std::shared_ptr<segments_array> m_cube_object;
 			std::shared_ptr<bezier_cube> m_soft_object;
+			std::shared_ptr<cube_object> m_bounds_object;
 
 			viewport_window m_viewport;
 			glm::vec3 m_frame_euler;

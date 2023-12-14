@@ -113,10 +113,24 @@ namespace mini {
 		0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7, 8, 9, 10, 8, 10, 11, 12, 13, 14, 12, 14, 15, 16, 17, 18, 16, 18, 19, 20, 21, 22, 20, 22, 23
 	};
 
+	void cube_object::set_cull_mode(culling_mode_t mode) {
+		m_cull_mode = mode;
+	}
+
+	cube_object::culling_mode_t cube_object::get_cull_mode() const {
+		return m_cull_mode;
+	}
+
+	void cube_object::set_surface_color(const glm::vec4& color) {
+		m_surface_color = color;
+	}
+
+	const glm::vec4& cube_object::get_surface_color() const {
+		return m_surface_color;
+	}
+
 	cube_object::cube_object(std::shared_ptr<shader_program> shader) {
-
 		constexpr int num_vertices = 24;
-
 
 		constexpr GLuint a_position = 0;
 		constexpr GLuint a_normal = 1;
@@ -125,6 +139,9 @@ namespace mini {
 
 		m_shader = shader;
 		m_pos_buffer = m_normal_buffer = m_uv_buffer = m_color_buffer = m_index_buffer = m_vao = 0;
+
+		m_cull_mode = culling_mode_t::back;
+		m_surface_color = glm::vec4{ 1.0f, 1.0f, 0.0f, 0.65f };
 
 		glGenVertexArrays(1, &m_vao);
 		glGenBuffers(1, &m_pos_buffer);
@@ -170,7 +187,23 @@ namespace mini {
 	}
 
 	void cube_object::render(app_context& context, const glm::mat4x4& world_matrix) const {
-		glEnable(GL_CULL_FACE);
+		if (m_cull_mode != culling_mode_t::none) {
+			glEnable(GL_CULL_FACE);
+		}
+
+		switch (m_cull_mode) {
+			case culling_mode_t::front:
+				glCullFace(GL_FRONT);
+				break;
+
+			case culling_mode_t::back:
+				glCullFace(GL_BACK);
+				break;
+
+			default:
+				break;
+		}
+
 		glBindVertexArray(m_vao);
 
 		m_shader->bind();
@@ -182,12 +215,15 @@ namespace mini {
 		m_shader->set_uniform("u_world", world_matrix);
 		m_shader->set_uniform("u_view", view_matrix);
 		m_shader->set_uniform("u_projection", proj_matrix);
-		m_shader->set_uniform("u_surface_color", glm::vec4{1.0f, 1.0f, 0.0f, 0.65f});
+		m_shader->set_uniform("u_surface_color", m_surface_color);
 
 		context.set_lights(*m_shader);
 
 		glDrawElements(GL_TRIANGLES, cube_indices.size(), GL_UNSIGNED_INT, NULL);
 		glBindVertexArray(0);
-		glDisable(GL_CULL_FACE);
+		
+		if (m_cull_mode != culling_mode_t::none) {
+			glDisable(GL_CULL_FACE);
+		}
 	}
 }
