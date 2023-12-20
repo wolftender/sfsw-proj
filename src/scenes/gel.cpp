@@ -19,7 +19,11 @@ namespace mini {
 	};
 
 	gel_scene::point_mass_t::point_mass_t(const glm::vec3& x) :
-		x(x), dx{0.0f, 0.0f, 0.0f}, ddx{0.0f, 0.0f, 0.0f} {}
+		x(x), 
+		dx{0.0f, 0.0f, 0.0f}, 
+		ddx{0.0f, 0.0f, 0.0f}, 
+		x0{ 0.0f, 0.0f, 0.0f }, 
+		dx0{ 0.0f, 0.0f, 0.0f } {}
 
 	////// EULER METHOD //////
 
@@ -118,20 +122,18 @@ namespace mini {
 		reset(settings);
 	}
 
-	constexpr float COLLISION_EPS = 1e-8;
+	constexpr float COLLISION_EPS = 1e-14;
 
 	template<std::ranges::forward_range _BoundsRange>
 	requires std::same_as<std::ranges::range_reference_t<_BoundsRange>, gel_scene::plane_t&>
 	inline bool check_collision(
-		const gel_scene::point_mass_t& mass, 
-		const _BoundsRange& bounds, 
-		glm::vec3& _intersection, 
-		glm::vec3& _normal,
-		float& _dist) {
+		const float bounce_factor,
+		gel_scene::point_mass_t& mass, 
+		const _BoundsRange& bounds) {
 
 		auto start = mass.x0;
 		auto end = mass.x;
-		auto direction = end - start;
+		auto direction = start - end;
 		auto length = glm::length(direction);
 
 		if (length < COLLISION_EPS) {
@@ -140,7 +142,10 @@ namespace mini {
 
 		direction = direction / length;
 
-		_dist = std::numeric_limits<float>::max();
+		glm::vec3 _intersection = {0.0f, 0.0f, 0.0f};
+		glm::vec3 _normal = {0.0f, 0.0f, 0.0f};
+		float _dist = std::numeric_limits<float>::max();
+
 		for (auto& bound : bounds) {
 			float num = glm::dot(bound.point - start, bound.normal);
 			float den = glm::dot(direction, bound.normal);
@@ -162,8 +167,18 @@ namespace mini {
 			}
 		}
 
-		return (_dist < length);
+		if (_dist < length) {
+			mass.x = _intersection;
+			mass.dx = glm::vec3{ 0.0f, 0.0f, 0.0f };
+			mass.ddx = glm::vec3{ 0.0f, 0.0f, 0.0f };
+			
+			return true;
+		}
+
+		return false;
 	}
+
+	constexpr unsigned int MAX_COLLISION_ITER = 10;
 
 	void gel_scene::simulation_state_t::integrate(float delta_time) {
 		// window was dragged probably
@@ -186,15 +201,11 @@ namespace mini {
 
 			// collision checking code
 			for (auto& mass : point_masses) {
-				glm::vec3 intersection;
-				glm::vec3 bound_normal;
-				float dist;
-
-				if (check_collision(mass, bounds, intersection, bound_normal, dist)) {
-					mass.x = intersection;
-					mass.dx = glm::vec3{ 0.0f, 0.0f, 0.0f }; //todo: reflect
-					mass.ddx = glm::vec3{ 0.0f, 0.0f, 0.0f };
-				}
+				unsigned int iter = 0;
+				// recursive collision checking, but no more than MAX_COLLISION_ITER times to not
+				// crash the simulation
+				while (check_collision(settings.bounce_coeffficient, mass, bounds) 
+					&& iter++ <= MAX_COLLISION_ITER);
 			}
 
 			t0 = t0 + settings.integration_step;
@@ -213,12 +224,12 @@ namespace mini {
 		const float max_y = settings.bounds_height * 0.5f;
 
 		bounds.clear();
-		bounds.push_back({ { 0.0f, 0.0f, -max_z }, { 0.0f, 0.0f, +max_z } });
-		bounds.push_back({ { 0.0f, 0.0f, +max_z }, { 0.0f, 0.0f, -max_z } });
-		bounds.push_back({ { +max_x, 0.0f, 0.0f }, { -max_x, 0.0f, 0.0f } });
-		bounds.push_back({ { -max_x, 0.0f, 0.0f }, { +max_x, 0.0f, 0.0f } });
-		bounds.push_back({ { 0.0f, +max_y, 0.0f }, { 0.0f, -max_y, 0.0f } });
-		bounds.push_back({ { 0.0f, -max_y, 0.0f }, { 0.0f, +max_y, 0.0f } });
+		bounds.push_back({ { 0.0f, 0.0f, -max_z }, glm::normalize(glm::vec3{ 0.0f, 0.0f, +max_z }) });
+		bounds.push_back({ { 0.0f, 0.0f, +max_z }, glm::normalize(glm::vec3{ 0.0f, 0.0f, -max_z }) });
+		bounds.push_back({ { +max_x, 0.0f, 0.0f }, glm::normalize(glm::vec3{ -max_x, 0.0f, 0.0f }) });
+		bounds.push_back({ { -max_x, 0.0f, 0.0f }, glm::normalize(glm::vec3{ +max_x, 0.0f, 0.0f }) });
+		bounds.push_back({ { 0.0f, +max_y, 0.0f }, glm::normalize(glm::vec3{ 0.0f, -max_y, 0.0f }) });
+		bounds.push_back({ { 0.0f, -max_y, 0.0f }, glm::normalize(glm::vec3{ 0.0f, +max_y, 0.0f }) });
 
 		time = 0.0f;
 		step_timer = 0.0f;
