@@ -457,8 +457,8 @@ namespace mini {
 		if (model_shader) {
 			m_bezier_model = std::make_shared<bezier_model_object>(
 				model_shader, triangle_mesh::read_from_file("meshes/duck.txt",
-					{0.0f, 1.0f, 0.0f},
-					{0.015f, -0.015f, -0.015f}), duck_albedo
+					{0.0f, 0.7f, 0.0f},
+					{0.01f, -0.01f, -0.01f}), duck_albedo
 			);
 		}
 
@@ -484,6 +484,7 @@ namespace mini {
 		for (std::size_t index = 0; index < m_state.point_masses.size(); ++index) {
 			m_springs_object->update_point(index, m_state.point_masses[index].x);
 			m_soft_object->update_point(index, m_state.point_masses[index].x);
+			m_bezier_model->update_point(index, m_state.point_masses[index].x);
 		}
 	}
 
@@ -545,7 +546,7 @@ context.draw(m_soft_object, bezier_model);
 			context.draw(m_bounds_object, bounds_model);
 		}
 
-		if (m_bezier_model) {
+		if (m_bezier_model && m_show_deform) {
 			auto model_model = glm::mat4x4(1.0f);
 			context.draw(m_bezier_model, model_model);
 		}

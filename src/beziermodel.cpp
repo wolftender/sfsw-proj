@@ -9,14 +9,23 @@ namespace mini {
 		m_surface_color = color;
 	}
 
+	void bezier_model_object::update_point(int index, const glm::vec3& position) {
+		if (index > 0 && index < BEZIER_POINT_COUNT) {
+			m_control_points[index] = position;
+		}
+	}
+
 	bezier_model_object::bezier_model_object(
 		std::shared_ptr<shader_program> shader,
 		std::shared_ptr<triangle_mesh> mesh, 
 		std::shared_ptr<texture> texture) : 
 		m_surface_color{1.0f, 1.0f, 1.0f, 1.0f} {
+
 		m_shader = shader;
 		m_mesh = mesh;
 		m_texture = texture;
+
+		std::fill(m_control_points.begin(), m_control_points.end(), glm::vec3{ 0.0f, 0.0f, 0.0f });
 	}
 
 	bezier_model_object::~bezier_model_object() {}
@@ -33,6 +42,11 @@ namespace mini {
 		m_shader->set_uniform("u_projection", proj_matrix);
 		m_shader->set_uniform("u_surface_color", m_surface_color);
 		m_shader->set_uniform("u_shininess", 0.0f);
+
+		// this method works because theres only 64 points
+		for (int index = 0; index < BEZIER_POINT_COUNT; ++index) {
+			m_shader->set_uniform(std::format("u_control_points[{}]", index), m_control_points[index]);
+		}
 
 		if (m_texture) {
 			m_texture->bind(GL_TEXTURE0);

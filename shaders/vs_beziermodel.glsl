@@ -8,6 +8,8 @@ uniform mat4 u_world;
 uniform mat4 u_view;
 uniform mat4 u_projection;
 
+uniform vec3 u_control_points[64];
+
 out VS_OUT {
     vec3 local_pos;
     vec3 world_pos;
@@ -17,8 +19,57 @@ out VS_OUT {
     vec3 world_normal;
 } vs_out;
 
+vec3 decasteljeu(vec3 b00, vec3 b01, vec3 b02, vec3 b03, float t) {
+    float t1 = t;
+    float t0 = 1.0 - t;
+
+    vec3 b10, b11, b12;
+    vec3 b20, b21;
+    vec3 b30;
+
+    b10 = t0 * b00 + t1 * b01;
+    b11 = t0 * b01 + t1 * b02;
+    b12 = t0 * b02 + t1 * b03;
+
+    b20 = t0 * b10 + t1 * b11;
+    b21 = t0 * b11 + t1 * b12;
+
+    b30 = t0 * b20 + t1 * b21;
+
+    return b30;
+}
+
+int loc(int mx, int my, int mz) {
+    return (mx * 16) + (my * 4) + mz;
+}
+
+vec3 p(int mx, int my, int mz) {
+    return u_control_points[loc(mx, my, mz)];
+}
+
+vec3 bezier_cube(vec3 coords) {
+    vec3 p1[4];
+    vec3 p2[4];
+    vec3 p3[4];
+
+    for (int mz = 0; mz < 4; ++mz) {
+        for (int my = 0; my < 4; ++my) {
+            for (int mx = 0; mx < 4; ++mx) {
+                p1[mx] = p(mx,my,mz);
+            }
+            p2[my] = decasteljeu(p1[0],p1[1],p1[2],p1[3], coords.x);
+        }
+        p3[mz] = decasteljeu(p2[0],p2[1],p2[2],p2[3], coords.y);
+    }
+
+    return decasteljeu(p3[0],p3[1],p3[2],p3[3], coords.z);
+}
+
 void main () {
-    vec4 world_pos = u_world * vec4 (a_position, 1.0);
+    vs_out.local_pos = a_position.xyz;
+    vec3 coords = (a_position.xyz + 1.0) * 0.5;
+
+    vec4 world_pos = vec4(bezier_cube(coords), 1.0f);
     vec4 view_pos = u_view * world_pos;
 
     vs_out.uv = a_uv;
