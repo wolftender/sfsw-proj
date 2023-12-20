@@ -201,7 +201,7 @@ namespace mini {
 		return false;
 	}
 
-	constexpr unsigned int MAX_COLLISION_ITER = 10;
+	constexpr unsigned int MAX_COLLISION_ITER = 5;
 
 	void gel_scene::simulation_state_t::integrate(float delta_time) {
 		// window was dragged probably
