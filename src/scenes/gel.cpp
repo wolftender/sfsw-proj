@@ -417,9 +417,11 @@ namespace mini {
 		auto grid_shader = get_app().get_store().get_shader("grid_xz");
 		auto point_shader = get_app().get_store().get_shader("point");
 		auto gel_shader = get_app().get_store().get_shader("gelcube");
+		auto model_shader = get_app().get_store().get_shader("bezier_model");
 
 		auto slime_albedo = get_app().get_store().get_texture("slime_albedo");
 		auto slime_normal = get_app().get_store().get_texture("slime_normal");
+		auto duck_albedo = get_app().get_store().get_texture("duck_albedo");
 
 		get_app().get_context().set_clear_color({ 0.75f, 0.75f, 0.9f });
 
@@ -450,6 +452,14 @@ namespace mini {
 		if (room_shader) {
 			m_bounds_object = std::make_shared<cube_object>(room_shader);
 			m_bounds_object->set_cull_mode(cube_object::culling_mode_t::front);
+		}
+
+		if (model_shader) {
+			m_bezier_model = std::make_shared<bezier_model_object>(
+				model_shader, triangle_mesh::read_from_file("meshes/duck.txt",
+					{0.0f, 1.0f, 0.0f},
+					{0.015f, -0.015f, 0.015f}), duck_albedo
+			);
 		}
 
 		auto camera = std::make_unique<default_camera>();
@@ -533,6 +543,11 @@ context.draw(m_soft_object, bezier_model);
 
 			auto bounds_model = glm::scale(glm::mat4(1.0f), glm::vec3{ half_width, half_height, half_width });
 			context.draw(m_bounds_object, bounds_model);
+		}
+
+		if (m_bezier_model) {
+			auto model_model = glm::mat4x4(1.0f);
+			context.draw(m_bezier_model, model_model);
 		}
 	}
 

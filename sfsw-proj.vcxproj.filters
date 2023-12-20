@@ -90,6 +90,12 @@
     <ClCompile Include="src\plane.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\mesh.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\beziermodel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="inc\app.hpp">
@@ -170,6 +176,12 @@
     <ClInclude Include="inc\plane.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="inc\mesh.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\beziermodel.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\fs_basic.glsl" />
@@ -195,12 +207,15 @@
     <None Include="shaders\tes_gelcube.glsl" />
     <None Include="shaders\vs_basic_tex.glsl" />
     <None Include="shaders\fs_shaded_room.glsl" />
+    <None Include="shaders\fs_beziermodel.glsl" />
+    <None Include="shaders\vs_beziermodel.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Font Include="opensans.ttf" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="functions.txt" />
+    <Text Include="meshes\duck.txt" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="textures\slime_albedo.png">
