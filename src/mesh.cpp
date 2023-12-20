@@ -170,6 +170,10 @@ namespace mini {
 			file >> normals[3 * i + 1];
 			file >> normals[3 * i + 2];
 
+			normals[3 * i + 0] *= scale.x;
+			normals[3 * i + 1] *= scale.y;
+			normals[3 * i + 2] *= scale.z;
+
 			file >> uv[2 * i + 0];
 			file >> uv[2 * i + 1];
 		}

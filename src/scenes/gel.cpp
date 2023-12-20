@@ -458,7 +458,7 @@ namespace mini {
 			m_bezier_model = std::make_shared<bezier_model_object>(
 				model_shader, triangle_mesh::read_from_file("meshes/duck.txt",
 					{0.0f, 1.0f, 0.0f},
-					{0.015f, -0.015f, 0.015f}), duck_albedo
+					{0.015f, -0.015f, -0.015f}), duck_albedo
 			);
 		}
 

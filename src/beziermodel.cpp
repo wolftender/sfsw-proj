@@ -32,6 +32,7 @@ namespace mini {
 		m_shader->set_uniform("u_view", view_matrix);
 		m_shader->set_uniform("u_projection", proj_matrix);
 		m_shader->set_uniform("u_surface_color", m_surface_color);
+		m_shader->set_uniform("u_shininess", 0.0f);
 
 		if (m_texture) {
 			m_texture->bind(GL_TEXTURE0);
