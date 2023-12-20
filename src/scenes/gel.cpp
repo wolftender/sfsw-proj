@@ -1,5 +1,6 @@
 #include <iostream>
 #include <array>
+#include <ranges>
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "gui.hpp"
@@ -44,8 +45,8 @@ namespace mini {
 
 	gel_scene::runge_kutta_solver_t::runge_kutta_solver_t(std::size_t num_masses) {
 		force_sums.resize(num_masses);
-		x0.resize(num_masses);
-		v0.resize(num_masses);
+		//x0.resize(num_masses);
+		//v0.resize(num_masses);
 		k1v.resize(num_masses);
 		k2v.resize(num_masses);
 		k3v.resize(num_masses);
@@ -67,8 +68,8 @@ namespace mini {
 		state.calculate_force_sums(force_sums);
 		for (size_t i = 0; i < num_masses; ++i) {
 			auto& mass = state.point_masses[i];
-			x0[i] = mass.x;
-			v0[i] = mass.dx;
+			//x0[i] = mass.x;
+			//v0[i] = mass.dx;
 
 			k1v[i] = minv * (force_sums[i] - mass.dx * friction) * dt;
 			k1x[i] = mass.dx * dt;
@@ -108,13 +109,60 @@ namespace mini {
 			k4v[i] = minv * (force_sums[i] - mass.dx * friction) * dt;
 			k4x[i] = mass.dx * dt;
 
-			mass.dx = v0[i] + (k1v[i] + 2.0f * k2v[i] + 2.0f * k3v[i] + k4v[i]) / 6.0f;
-			mass.x = x0[i] + (k1x[i] + 2.0f * k2x[i] + 2.0f * k3x[i] + k4x[i]) / 6.0f;
+			mass.dx = mass.dx0 + (k1v[i] + 2.0f * k2v[i] + 2.0f * k3v[i] + k4v[i]) / 6.0f;
+			mass.x = mass.x0 + (k1x[i] + 2.0f * k2x[i] + 2.0f * k3x[i] + k4x[i]) / 6.0f;
 		}
 	}
 
 	gel_scene::simulation_state_t::simulation_state_t(const simulation_settings_t& settings) {
 		reset(settings);
+	}
+
+	constexpr float COLLISION_EPS = 1e-8;
+
+	template<std::ranges::forward_range _BoundsRange>
+	requires std::same_as<std::ranges::range_reference_t<_BoundsRange>, gel_scene::plane_t&>
+	inline bool check_collision(
+		const gel_scene::point_mass_t& mass, 
+		const _BoundsRange& bounds, 
+		glm::vec3& _intersection, 
+		glm::vec3& _normal,
+		float& _dist) {
+
+		auto start = mass.x0;
+		auto end = mass.x;
+		auto direction = end - start;
+		auto length = glm::length(direction);
+
+		if (length < COLLISION_EPS) {
+			return false;
+		}
+
+		direction = direction / length;
+
+		_dist = std::numeric_limits<float>::max();
+		for (auto& bound : bounds) {
+			float num = glm::dot(bound.point - start, bound.normal);
+			float den = glm::dot(direction, bound.normal);
+
+			// parallel to the plane
+			if (glm::abs(den) < COLLISION_EPS || num <= COLLISION_EPS) {
+				continue;
+			}
+
+			float d = (num / den);
+			if (d > length) {
+				continue;
+			}
+
+			if (d < _dist) {
+				_dist = d;
+				_intersection = start + direction * d;
+				_normal = bound.normal;
+			}
+		}
+
+		return (_dist < length);
 	}
 
 	void gel_scene::simulation_state_t::integrate(float delta_time) {
@@ -129,7 +177,25 @@ namespace mini {
 		while (step_timer > settings.integration_step) {
 			const float step = settings.integration_step;
 
+			for (auto& mass : point_masses) {
+				mass.x0 = mass.x;
+				mass.dx0 = mass.dx;
+			}
+
 			solver->solve(*this, step);
+
+			// collision checking code
+			for (auto& mass : point_masses) {
+				glm::vec3 intersection;
+				glm::vec3 bound_normal;
+				float dist;
+
+				if (check_collision(mass, bounds, intersection, bound_normal, dist)) {
+					mass.x = intersection;
+					mass.dx = glm::vec3{ 0.0f, 0.0f, 0.0f }; //todo: reflect
+					mass.ddx = glm::vec3{ 0.0f, 0.0f, 0.0f };
+				}
+			}
 
 			t0 = t0 + settings.integration_step;
 			step_timer -= settings.integration_step;
@@ -140,6 +206,19 @@ namespace mini {
 
 	void gel_scene::simulation_state_t::reset(const simulation_settings_t& settings) {
 		this->settings = settings;
+
+		// initialize bounding planes
+		const float max_x = settings.bounds_width * 0.5f;
+		const float max_z = settings.bounds_width * 0.5f;
+		const float max_y = settings.bounds_height * 0.5f;
+
+		bounds.clear();
+		bounds.push_back({ { 0.0f, 0.0f, -max_z }, { 0.0f, 0.0f, +max_z } });
+		bounds.push_back({ { 0.0f, 0.0f, +max_z }, { 0.0f, 0.0f, -max_z } });
+		bounds.push_back({ { +max_x, 0.0f, 0.0f }, { -max_x, 0.0f, 0.0f } });
+		bounds.push_back({ { -max_x, 0.0f, 0.0f }, { +max_x, 0.0f, 0.0f } });
+		bounds.push_back({ { 0.0f, +max_y, 0.0f }, { 0.0f, -max_y, 0.0f } });
+		bounds.push_back({ { 0.0f, -max_y, 0.0f }, { 0.0f, +max_y, 0.0f } });
 
 		time = 0.0f;
 		step_timer = 0.0f;
@@ -232,7 +311,7 @@ namespace mini {
 			float c = settings.spring_coefficient;
 
 			float dn = glm::length(d12);
-			float magnitude = c * (dn - l) / (dn + 0.0001f);
+			float magnitude = c * (dn - l) / (dn + 1e-5);
 
 			auto f12 = magnitude * d12;
 			auto f21 = magnitude * d21;

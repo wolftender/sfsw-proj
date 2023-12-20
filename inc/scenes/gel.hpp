@@ -39,7 +39,7 @@ namespace mini {
 			struct runge_kutta_solver_t : public differential_solver_t {
 				std::vector<glm::vec3> force_sums;
 
-				std::vector<glm::vec3> x0, v0;
+				//std::vector<glm::vec3> x0, v0;
 				std::vector<glm::vec3> k1v, k2v, k3v, k4v;
 				std::vector<glm::vec3> k1x, k2x, k3x, k4x;
 
@@ -61,6 +61,7 @@ namespace mini {
 				float frame_length;
 				float bounds_width;
 				float bounds_height;
+				float bounce_coeffficient;
 
 				solver_type_t solver_type;
 				bool enable_gravity;
@@ -76,11 +77,15 @@ namespace mini {
 					frame_length(3.2f),
 					bounds_width(8.0f),
 					bounds_height(8.0f),
+					bounce_coeffficient(0.4f),
 					solver_type(solver_type_t::euler),
 					enable_gravity(false) { }
 			};
 
 			struct point_mass_t {
+				glm::vec3 x0;
+				glm::vec3 dx0;
+
 				glm::vec3 x;
 				glm::vec3 dx;
 				glm::vec3 ddx;
@@ -91,6 +96,11 @@ namespace mini {
 			struct spring_t {
 				float length;
 				bool enabled;
+			};
+
+			struct plane_t {
+				glm::vec3 point;
+				glm::vec3 normal;
 			};
 
 			struct simulation_state_t {
@@ -106,6 +116,8 @@ namespace mini {
 				float time, step_timer;
 				float mass_inv;
 				float frame_spring_len;
+
+				std::vector<plane_t> bounds;
 
 				simulation_state_t(const simulation_settings_t& settings);
 
