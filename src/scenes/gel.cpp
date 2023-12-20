@@ -133,7 +133,7 @@ namespace mini {
 
 		auto start = mass.x0;
 		auto end = mass.x;
-		auto direction = start - end;
+		auto direction = end - start;
 		auto length = glm::length(direction);
 
 		if (length < COLLISION_EPS) {
@@ -156,7 +156,7 @@ namespace mini {
 			}
 
 			float d = (num / den);
-			if (d > length) {
+			if (d > length || d > 0) {
 				continue;
 			}
 
@@ -168,9 +168,31 @@ namespace mini {
 		}
 
 		if (_dist < length) {
-			mass.x = _intersection;
-			mass.dx = glm::vec3{ 0.0f, 0.0f, 0.0f };
-			mass.ddx = glm::vec3{ 0.0f, 0.0f, 0.0f };
+			if (bounce_factor <= 0.0001f) {
+				mass.x = _intersection;
+				mass.dx = glm::vec3{ 0.0f, 0.0f, 0.0f };
+			} else {
+				// reflect position
+				float total_dist = length;
+				float travel_dist = glm::abs(_dist);
+				float reflect_dist = total_dist - travel_dist;
+
+				auto incident_move = direction;
+				auto reflect_move = glm::normalize(glm::reflect(incident_move, _normal));
+
+				mass.x0 = mass.x;
+				mass.x = _intersection + reflect_move * reflect_dist * bounce_factor;
+
+				// reflect velocity
+				float total_speed = glm::length(mass.dx);
+				float damped_speed = total_speed * bounce_factor;
+
+				auto velocity_dir = mass.dx / total_speed;
+				auto reflected_vel = glm::normalize(glm::reflect(velocity_dir, _normal));
+
+				mass.dx0 = mass.dx;
+				mass.dx = reflected_vel * damped_speed;
+			}
 			
 			return true;
 		}
@@ -204,7 +226,7 @@ namespace mini {
 				unsigned int iter = 0;
 				// recursive collision checking, but no more than MAX_COLLISION_ITER times to not
 				// crash the simulation
-				while (check_collision(settings.bounce_coeffficient, mass, bounds) 
+				while (check_collision(settings.bounce_coefficient, mass, bounds) 
 					&& iter++ <= MAX_COLLISION_ITER);
 			}
 
@@ -332,43 +354,45 @@ namespace mini {
 		}
 
 		// calculate forces working on edges
-		auto cube_model = glm::mat4x4(1.0f);
-		float s = 0.5f * settings.frame_length;
+		if (world.enable_frame) {
+			auto cube_model = glm::mat4x4(1.0f);
+			float s = 0.5f * settings.frame_length;
 
-		cube_model = glm::translate(cube_model, frame_offset);
-		cube_model = cube_model * glm::mat4_cast(frame_rotation);
-		cube_model = glm::scale(cube_model, { s, s, s });
+			cube_model = glm::translate(cube_model, frame_offset);
+			cube_model = cube_model * glm::mat4_cast(frame_rotation);
+			cube_model = glm::scale(cube_model, { s, s, s });
 
-		for (int x = 0; x <= 1; ++x) {
-			for (int y = 0; y <= 1; ++y) {
-				for (int z = 0; z <= 1; ++z) {
-					glm::vec3 frame_point = cube_model * glm::vec4{
-						-1.0f + x * 2.0f,
-						-1.0f + y * 2.0f,
-						-1.0f + z * 2.0f, 1.0f
-					};
+			for (int x = 0; x <= 1; ++x) {
+				for (int y = 0; y <= 1; ++y) {
+					for (int z = 0; z <= 1; ++z) {
+						glm::vec3 frame_point = cube_model * glm::vec4{
+							-1.0f + x * 2.0f,
+							-1.0f + y * 2.0f,
+							-1.0f + z * 2.0f, 1.0f
+						};
 
-					int mx = x * 3;
-					int my = y * 3;
-					int mz = z * 3;
-					int mass_id = (mx * 16) + (my * 4) + mz;
+						int mx = x * 3;
+						int my = y * 3;
+						int mz = z * 3;
+						int mass_id = (mx * 16) + (my * 4) + mz;
 
-					auto& mass = point_masses[mass_id];
-					float l = frame_spring_len;
-					float c = settings.frame_coefficient;
-					glm::vec3 d = frame_point - mass.x;
-					float dn = glm::length(d);
-					float magnitude = c * (dn - l) / (dn + 0.0001f);
+						auto& mass = point_masses[mass_id];
+						float l = frame_spring_len;
+						float c = settings.frame_coefficient;
+						glm::vec3 d = frame_point - mass.x;
+						float dn = glm::length(d);
+						float magnitude = c * (dn - l) / (dn + 0.0001f);
 
-					force_sums[mass_id] += magnitude * d;
+						force_sums[mass_id] += magnitude * d;
+					}
 				}
 			}
 		}
 
 		// calculate gravity forces
-		if (settings.enable_gravity) {
+		if (world.enable_gravity) {
 			for (auto& sum : force_sums) {
-				sum += glm::vec3{ 0.0f, settings.mass * settings.gravity, 0.0f };
+				sum += glm::vec3{ 0.0f, settings.mass * world.gravity, 0.0f };
 			}
 		}
 	}
@@ -489,10 +513,10 @@ namespace mini {
 		if (m_soft_object && m_show_bezier) {
 			auto bezier_model = glm::mat4x4(1.0f);
 
-			m_soft_object->set_wireframe(m_wireframe_mode);
-			m_soft_object->refresh_buffer();
+m_soft_object->set_wireframe(m_wireframe_mode);
+m_soft_object->refresh_buffer();
 
-			context.draw(m_soft_object, bezier_model);
+context.draw(m_soft_object, bezier_model);
 		}
 
 		if (m_grid) {
@@ -504,7 +528,7 @@ namespace mini {
 			float half_width = m_state.settings.bounds_width * 0.5f;
 			float half_height = m_state.settings.bounds_height * 0.5f;
 
-			auto bounds_model = glm::scale(glm::mat4(1.0f), glm::vec3{half_width, half_height, half_width});
+			auto bounds_model = glm::scale(glm::mat4(1.0f), glm::vec3{ half_width, half_height, half_width });
 			context.draw(m_bounds_object, bounds_model);
 		}
 	}
@@ -563,7 +587,7 @@ namespace mini {
 			if (rotation_changed) {
 				glm::quat rotation = { 1.0f, 0.0f, 0.0f, 0.0f };
 
-				rotation = rotation * glm::angleAxis(m_frame_euler[2], glm::vec3{0.0f, 0.0f, 1.0f});
+				rotation = rotation * glm::angleAxis(m_frame_euler[2], glm::vec3{ 0.0f, 0.0f, 1.0f });
 				rotation = rotation * glm::angleAxis(m_frame_euler[1], glm::vec3{ 0.0f, 1.0f, 0.0f });
 				rotation = rotation * glm::angleAxis(m_frame_euler[0], glm::vec3{ 1.0f, 0.0f, 0.0f });
 
@@ -588,13 +612,18 @@ namespace mini {
 			ImGui::Checkbox("##gel_show_wirefr", &m_wireframe_mode);
 		}
 
-		if (ImGui::CollapsingHeader("Simulation Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
+		if (ImGui::CollapsingHeader("World Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
+			gui::prefix_label("Frame Enabled: ", 250.0f);
+			ImGui::Checkbox("##gel_frame_on", &m_state.world.enable_frame);
+
 			gui::prefix_label("Gravity Enabled: ", 250.0f);
-			ImGui::Checkbox("##gel_gravity_on", &m_settings.enable_gravity);
+			ImGui::Checkbox("##gel_gravity_on", &m_state.world.enable_gravity);
 
 			gui::prefix_label("Gravity Force: ", 250.0f);
-			ImGui::InputFloat("##gel_gravity_f", &m_settings.gravity);
+			ImGui::InputFloat("##gel_gravity_f", &m_state.world.gravity);
+		}
 
+		if (ImGui::CollapsingHeader("Simulation Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
 			gui::prefix_label("Bound Width: ", 250.0f);
 			ImGui::InputFloat("##gel_bound_w", &m_settings.bounds_width);
 
@@ -615,6 +644,10 @@ namespace mini {
 
 			gui::prefix_label("Frame Spring Coeff.: ", 250.0f);
 			ImGui::InputFloat("##gel_spring_coeff_f", &m_settings.frame_coefficient);
+
+			gui::prefix_label("Bounce Coeff.: ", 250.0f);
+			ImGui::InputFloat("##gel_bounce", &m_settings.bounce_coefficient);
+			gui::clamp(m_settings.bounce_coefficient, 0.0f, 1.0f);
 
 			gui::prefix_label("Frame Size: ", 250.0f);
 			ImGui::InputFloat("##gel_frame_size", &m_settings.frame_length);

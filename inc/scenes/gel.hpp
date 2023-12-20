@@ -50,8 +50,18 @@ namespace mini {
 				void solve(simulation_state_t& state, float step) override;
 			};
 
-			struct simulation_settings_t {
+			struct world_settings_t {
 				float gravity;
+				bool enable_gravity;
+				bool enable_frame;
+
+				world_settings_t() :
+					gravity(9.807f),
+					enable_gravity(false),
+					enable_frame(true) { }
+			};
+
+			struct simulation_settings_t {
 				float mass;
 				float spring_length;
 				float spring_friction;
@@ -61,13 +71,11 @@ namespace mini {
 				float frame_length;
 				float bounds_width;
 				float bounds_height;
-				float bounce_coeffficient;
+				float bounce_coefficient;
 
 				solver_type_t solver_type;
-				bool enable_gravity;
 
 				simulation_settings_t() :
-					gravity(9.807f),
 					mass(1.0f),
 					spring_length(1.0f),
 					spring_friction(1.0f),
@@ -77,9 +85,8 @@ namespace mini {
 					frame_length(3.2f),
 					bounds_width(8.0f),
 					bounds_height(8.0f),
-					bounce_coeffficient(0.4f),
-					solver_type(solver_type_t::euler),
-					enable_gravity(false) { }
+					bounce_coefficient(0.4f),
+					solver_type(solver_type_t::euler) { }
 			};
 
 			struct point_mass_t {
@@ -113,6 +120,8 @@ namespace mini {
 				glm::quat frame_rotation;
 
 				simulation_settings_t settings;
+				world_settings_t world;
+
 				float time, step_timer;
 				float mass_inv;
 				float frame_spring_len;
