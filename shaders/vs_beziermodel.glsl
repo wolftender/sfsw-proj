@@ -74,7 +74,16 @@ void main () {
 
     vs_out.uv = a_uv;
     vs_out.normal = a_normal;
-    vs_out.world_normal = normalize((u_world * vec4(a_normal, 0.0)).xyz);
+
+    // mapping normals to curvilinear space
+    //  1. take a POINT that is current surface point plus very small offset in normal direction
+    //  2. map this point using bezier cube mapping
+    //  3. read the normal back
+    vec3 offset_pos = a_position.xyz + 0.05 * a_normal.xyz;
+    vec3 coords_norm = (offset_pos.xyz + 1.0) * 0.5;
+    vec3 offset_mapped = bezier_cube(coords_norm);
+    vec3 world_normal = normalize(offset_mapped - world_pos.xyz);
+    vs_out.world_normal = world_normal;
 
     vs_out.world_pos = world_pos.xyz;
     vs_out.view_pos = view_pos.xyz; 
