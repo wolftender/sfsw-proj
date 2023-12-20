@@ -1,6 +1,7 @@
 #include <iostream>
 #include <array>
 #include <ranges>
+#include <random>
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "gui.hpp"
@@ -407,7 +408,9 @@ namespace mini {
 		m_show_points(false), 
 		m_show_bezier(true),
 		m_show_deform(true),
-		m_wireframe_mode(false) {
+		m_wireframe_mode(false),
+		m_distort_min{ 0.0f, 0.0f, 0.0f },
+		m_distort_max{ 0.0f, 0.0f, 0.0f } {
 
 		auto line_shader = get_app().get_store().get_shader("line");
 		auto room_shader = get_app().get_store().get_shader("room");
@@ -550,6 +553,40 @@ context.draw(m_soft_object, bezier_model);
 		}
 	}
 
+	void gel_scene::m_gel_distort() {
+		std::random_device rd;
+		std::mt19937 re(rd());
+		std::uniform_real_distribution<float> dist_x(m_distort_min.x, m_distort_max.x);
+		std::uniform_real_distribution<float> dist_y(m_distort_min.y, m_distort_max.y);
+		std::uniform_real_distribution<float> dist_z(m_distort_min.z, m_distort_max.z);
+
+		for (auto& mass : m_state.point_masses) {
+			mass.dx = glm::vec3{
+				dist_x(re),
+				dist_y(re),
+				dist_z(re)
+			};
+		}
+	}
+
+	void gel_scene::m_gel_throw() {
+		std::random_device rd;
+		std::mt19937 re(rd());
+		std::uniform_real_distribution<float> dist_x(m_distort_min.x, m_distort_max.x);
+		std::uniform_real_distribution<float> dist_y(m_distort_min.y, m_distort_max.y);
+		std::uniform_real_distribution<float> dist_z(m_distort_min.z, m_distort_max.z);
+
+		auto dir = glm::vec3{
+			dist_x(re),
+			dist_y(re),
+			dist_z(re)
+		};
+
+		for (auto& mass : m_state.point_masses) {
+			mass.dx = dir;
+		}
+	}
+
 	void gel_scene::m_gui_viewport() {
 		m_viewport.display();
 	}
@@ -621,6 +658,44 @@ context.draw(m_soft_object, bezier_model);
 
 			gui::prefix_label("Gravity Force: ", 250.0f);
 			ImGui::InputFloat("##gel_gravity_f", &m_state.world.gravity);
+		}
+
+		if (ImGui::CollapsingHeader("Distort Settings")) {
+			gui::prefix_label("Distort X Min.: ", 250.0f);
+			ImGui::SliderFloat("##gel_distmin_x", &m_distort_min.x, -15.0f, 15.0f);
+
+			gui::prefix_label("Distort Y Min.: ", 250.0f);
+			ImGui::SliderFloat("##gel_distmin_y", &m_distort_min.y, -15.0f, 15.0f);
+
+			gui::prefix_label("Distort Z Min.: ", 250.0f);
+			ImGui::SliderFloat("##gel_distmin_z", &m_distort_min.z, -15.0f, 15.0f);
+
+			gui::prefix_label("Distort X Max.: ", 250.0f);
+			ImGui::SliderFloat("##gel_distmax_x", &m_distort_max.x, -15.0f, 15.0f);
+
+			gui::prefix_label("Distort Y Max.: ", 250.0f);
+			ImGui::SliderFloat("##gel_distmax_y", &m_distort_max.y, -15.0f, 15.0f);
+
+			gui::prefix_label("Distort Z Max.: ", 250.0f);
+			ImGui::SliderFloat("##gel_distmax_z", &m_distort_max.z, -15.0f, 15.0f);
+
+			gui::clamp(m_distort_min.x, -15.0f, m_distort_max.x);
+			gui::clamp(m_distort_min.y, -15.0f, m_distort_max.y);
+			gui::clamp(m_distort_min.z, -15.0f, m_distort_max.z);
+
+			gui::clamp(m_distort_max.x, m_distort_min.x, 15.0f);
+			gui::clamp(m_distort_max.y, m_distort_min.y, 15.0f);
+			gui::clamp(m_distort_max.z, m_distort_min.z, 15.0f);
+
+			if (ImGui::Button("Distort")) {
+				m_gel_distort();
+			}
+
+			ImGui::SameLine();
+
+			if (ImGui::Button("Throw")) {
+				m_gel_throw();
+			}
 		}
 
 		if (ImGui::CollapsingHeader("Simulation Settings", ImGuiTreeNodeFlags_DefaultOpen)) {

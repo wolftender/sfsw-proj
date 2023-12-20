@@ -156,6 +156,9 @@ namespace mini {
 			bool m_show_deform;
 			bool m_wireframe_mode;
 
+			glm::vec3 m_distort_min;
+			glm::vec3 m_distort_max;
+
 		public:
 			gel_scene(application_base& app);
 			~gel_scene();
@@ -172,6 +175,9 @@ namespace mini {
 			virtual void on_scroll(double offset_x, double offset_y) override;
 
 		private:
+			void m_gel_distort();
+			void m_gel_throw();
+
 			void m_gui_viewport();
 			void m_gui_settings();
 
