@@ -35,6 +35,7 @@ namespace mini {
 			"shaders/tcs_gelcube.glsl", "shaders/tes_gelcube.glsl");
 		m_store.load_shader("obstacle", "shaders/vs_basic_tex.glsl", "shaders/fs_solidcolor.glsl");
 		m_store.load_shader("bezier_model", "shaders/vs_beziermodel.glsl", "shaders/fs_beziermodel.glsl");
+		m_store.load_shader("puma", "shaders/vs_shaded.glsl", "shaders/fs_shaded.glsl");
 
 		// load textures
 		m_store.load_texture("slime_albedo", "textures/slime_albedo.png");

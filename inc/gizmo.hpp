@@ -23,6 +23,9 @@ namespace mini {
 			std::shared_ptr<shader_program> m_shader_mesh;
 
 		public:
+			static void make_gizmo_verts(std::vector<float>& positions, std::vector<GLuint>& indices, 
+				int res, float r1, float r2, float r3, float h);
+
 			gizmo(std::shared_ptr<shader_program> shader_mesh);
 			~gizmo();
 
