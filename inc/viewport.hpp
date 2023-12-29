@@ -12,6 +12,7 @@ namespace mini {
 
 			bool m_viewport_focus;
 			bool m_mouse_in_viewport;
+			bool m_camera_moved;
 
 			float m_distance;
 			float m_cam_pitch;
@@ -30,6 +31,8 @@ namespace mini {
 
 			viewport_window(const viewport_window&) = delete;
 			viewport_window& operator=(const viewport_window&) = delete;
+
+			bool is_camera_moved() const;
 
 			bool is_viewport_focused() const;
 			bool is_mouse_in_viewport() const;

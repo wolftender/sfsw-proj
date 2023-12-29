@@ -6,6 +6,7 @@ namespace mini {
 		scene_base(app), 
 		m_context1(app.get_context()),
 		m_context2(video_mode_t(600, 400)), 
+		m_distance(10.0f),
 		m_viewport1(app, m_context1, "Config Interp."),
 		m_viewport2(app, m_context2, "Effector Interp.") {
 
@@ -21,8 +22,8 @@ namespace mini {
 
 		if (puma_shader) {
 			m_effector_mesh = m_make_effector_mesh();
-			m_arm_mesh = triangle_mesh::make_cylinder(0.4f, 5.0f, 20, 20);
-			m_joint_mesh = triangle_mesh::make_cylinder(0.6f, 2.0f, 20, 20);
+			m_arm_mesh = triangle_mesh::make_cylinder(0.3f, 1.0f, 50, 20);
+			m_joint_mesh = triangle_mesh::make_cylinder(0.5f, 0.7f, 50, 20);
 
 			m_effector_model_x = std::make_shared<model_object>(m_effector_mesh, puma_shader);
 			m_effector_model_y = std::make_shared<model_object>(m_effector_mesh, puma_shader);
@@ -54,6 +55,17 @@ namespace mini {
 	void puma_scene::integrate(float delta_time) {
 		m_viewport1.update(delta_time);
 		m_viewport2.update(delta_time);
+
+		m_viewport1.set_distance(m_distance);
+		m_viewport2.set_distance(m_distance);
+
+		if (m_viewport1.is_camera_moved()) {
+			m_viewport2.set_cam_pitch(m_viewport1.get_cam_pitch());
+			m_viewport2.set_cam_yaw(m_viewport1.get_cam_yaw());
+		} else if (m_viewport2.is_camera_moved()) {
+			m_viewport1.set_cam_pitch(m_viewport2.get_cam_pitch());
+			m_viewport1.set_cam_yaw(m_viewport2.get_cam_yaw());
+		}
 	}
 
 	inline void setup_light(app_context& context) {
@@ -66,10 +78,80 @@ namespace mini {
 		light.att_const = 1.0f;
 	}
 
+	inline glm::mat4x4 rotation_mat(const glm::vec3& axis, float angle) {
+		constexpr glm::mat4x4 id(1.0f);
+		return glm::rotate(id, angle, axis);
+	}
+
+	inline glm::mat4x4 translation_mat(const glm::vec3& vec) {
+		constexpr glm::mat4x4 id(1.0f);
+		return glm::translate(id, vec);
+	}
+
+	inline glm::mat4x4 scale_mat(const glm::vec3& vec) {
+		constexpr glm::mat4x4 id(1.0f);
+		return glm::scale(id, vec);
+	}
+
 	void puma_scene::m_draw_puma(app_context& context, const puma_config_t& config) const {
-		context.draw(m_arm_model, glm::mat4x4(1.0f));
-		context.draw(m_joint_model, glm::mat4x4(1.0f));
-		context.draw(m_effector_model_x, glm::mat4x4(1.0f));
+		constexpr auto AXIS_X = glm::vec3{ 1.0f, 0.0f, 0.0f };
+		constexpr auto AXIS_Y = glm::vec3{ 0.0f, 1.0f, 0.0f };
+		constexpr auto AXIS_Z = glm::vec3{ 0.0f, 0.0f, 1.0f };
+		constexpr auto PI = glm::pi<float>();
+		constexpr auto HPI = 0.5f * PI;
+
+		std::array<glm::mat4x4, 4> arm_matrix;
+		std::array<glm::mat4x4, 5> joint_matrix;
+		glm::mat4x4 effector_matrix;
+
+		std::fill(arm_matrix.begin(), arm_matrix.end(), glm::mat4x4(1.0f));
+		std::fill(joint_matrix.begin(), joint_matrix.end(), glm::mat4x4(1.0f));
+		effector_matrix = glm::mat4x4(1.0f);
+
+		// forward kinematics
+		joint_matrix[0] = rotation_mat(AXIS_X, HPI) * rotation_mat(AXIS_Z, config.q1);
+		arm_matrix[0] = rotation_mat(AXIS_X, HPI) * rotation_mat(AXIS_Z, config.q1);
+
+		joint_matrix[1] = joint_matrix[0] * translation_mat({ 0.0f, 0.0f, config.l1 }) * 
+			rotation_mat(AXIS_X, HPI - config.q2);
+		arm_matrix[1] = arm_matrix[0] * translation_mat({0.0f, 0.0f, config.l1}) * 
+			rotation_mat(AXIS_X, HPI - config.q2);
+
+		joint_matrix[2] = joint_matrix[1] * translation_mat({0.0f, 0.0f, config.q3 }) * 
+			rotation_mat(AXIS_X, HPI + config.q4);
+		arm_matrix[2] = arm_matrix[1] * translation_mat({ 0.0f, 0.0f, config.q3 }) *
+			rotation_mat(AXIS_X, HPI + config.q4);
+
+		joint_matrix[3] = joint_matrix[2] * translation_mat({ 0.0f, 0.0f, config.l2 }) * 
+			rotation_mat(AXIS_X, -HPI);
+		arm_matrix[3] = arm_matrix[2] * translation_mat({ 0.0f, 0.0f, config.l2 }) *
+			rotation_mat(AXIS_X, -HPI);
+
+		joint_matrix[4] = joint_matrix[3] * translation_mat({ 0.0f, 0.0f, config.l3 });
+
+		joint_matrix[1] = joint_matrix[1] * rotation_mat(AXIS_Y, HPI) * translation_mat({ 0.0f, 0.0f, -0.35f });
+		joint_matrix[2] = joint_matrix[2] * rotation_mat(AXIS_Y, HPI) * translation_mat({ 0.0f, 0.0f, -0.35f });
+		joint_matrix[3] = joint_matrix[3] * translation_mat({ 0.0f, 0.0f, -0.35f });
+		joint_matrix[4] = joint_matrix[4] * translation_mat({ 0.0f, 0.0f, -0.35f });
+
+		effector_matrix = arm_matrix[3] * translation_mat({ 0.0f, 0.0f, config.l3 }) * rotation_mat(AXIS_Z, -config.q5);
+
+		arm_matrix[0] = arm_matrix[0] * scale_mat({ 1.0f, 1.0f, config.l1 });
+		arm_matrix[1] = arm_matrix[1] * scale_mat({ 1.0f, 1.0f, config.q3 });
+		arm_matrix[2] = arm_matrix[2] * scale_mat({ 1.0f, 1.0f, config.l2 });
+		arm_matrix[3] = arm_matrix[3] * scale_mat({ 1.0f, 1.0f, config.l3 });
+
+		for (const auto& mat : joint_matrix) {
+			context.draw(m_joint_model, mat);
+		}
+
+		for (const auto& mat : arm_matrix) {
+			context.draw(m_arm_model, mat);
+		}
+		
+		context.draw(m_effector_model_y, effector_matrix * translation_mat({ 0.0f, 0.6f, 0.0f }));
+		context.draw(m_effector_model_z, effector_matrix * rotation_mat(AXIS_Z, HPI) * translation_mat({ 0.0f, 0.6f, 0.0f }));
+		context.draw(m_effector_model_x, effector_matrix * rotation_mat(AXIS_X, HPI) * translation_mat({ 0.0f, 0.6f, 0.0f }));
 	}
 
 	void puma_scene::render(app_context& context) {
@@ -96,10 +178,41 @@ namespace mini {
 		m_viewport2.display();
 	}
 
+	void puma_scene::m_gui_settings() {
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(270, 450));
+		ImGui::Begin("Simulation Settings", NULL);
+		ImGui::SetWindowPos(ImVec2(30, 30), ImGuiCond_Once);
+		ImGui::SetWindowSize(ImVec2(270, 450), ImGuiCond_Once);
+
+		auto min = ImGui::GetWindowContentRegionMin();
+		auto max = ImGui::GetWindowContentRegionMax();
+		auto width = max.x - min.x;
+
+		ImGui::SliderFloat("q1", &m_config1.q1, 0.0f, 10.0f);
+		ImGui::SliderFloat("q2", &m_config1.q2, 0.0f, 10.0f);
+		ImGui::SliderFloat("q3", &m_config1.q3, 0.0f, 10.0f);
+		ImGui::SliderFloat("q4", &m_config1.q4, 0.0f, 10.0f);
+		ImGui::SliderFloat("q5", &m_config1.q5, 0.0f, 10.0f);
+
+		ImGui::End();
+		ImGui::PopStyleVar(1);
+	}
+
 	void puma_scene::menu() {
 		if (ImGui::BeginMenu("File", false)) {
 			ImGui::EndMenu();
 		}
+	}
+
+	void puma_scene::on_scroll(double offset_x, double offset_y) {
+		bool vp1_focus = m_viewport1.is_viewport_focused() && m_viewport1.is_mouse_in_viewport();
+		bool vp2_focus = m_viewport2.is_viewport_focused() && m_viewport2.is_mouse_in_viewport();
+
+		if (vp1_focus || vp2_focus) {
+			m_distance = m_distance - (static_cast<float> (offset_y) / 2.0f);
+		}
+
+		m_distance = glm::clamp(m_distance, 1.0f, 30.0f);
 	}
 
 	std::shared_ptr<triangle_mesh> puma_scene::m_make_effector_mesh() {
@@ -161,19 +274,5 @@ namespace mini {
 		}
 
 		return std::make_shared<triangle_mesh>(positions, normals, uvs, indices);
-	}
-
-	void puma_scene::m_gui_settings() {
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(270, 450));
-		ImGui::Begin("Simulation Settings", NULL);
-		ImGui::SetWindowPos(ImVec2(30, 30), ImGuiCond_Once);
-		ImGui::SetWindowSize(ImVec2(270, 450), ImGuiCond_Once);
-
-		auto min = ImGui::GetWindowContentRegionMin();
-		auto max = ImGui::GetWindowContentRegionMax();
-		auto width = max.x - min.x;
-
-		ImGui::End();
-		ImGui::PopStyleVar(1);
 	}
 }

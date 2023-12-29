@@ -10,6 +10,7 @@ namespace mini {
 		m_name(name),
 		m_viewport_focus(false),
 		m_mouse_in_viewport(false),
+		m_camera_moved(false),
 		m_last_vp_width(0),
 		m_last_vp_height(0),
 		m_vp_mouse_offset{0, 0},
@@ -25,6 +26,7 @@ namespace mini {
 		m_name(name),
 		m_viewport_focus(false),
 		m_mouse_in_viewport(false),
+		m_camera_moved(false),
 		m_last_vp_width(0),
 		m_last_vp_height(0),
 		m_vp_mouse_offset{ 0, 0 },
@@ -35,6 +37,10 @@ namespace mini {
 	}
 
 	viewport_window::~viewport_window() {}
+
+	bool viewport_window::is_camera_moved() const {
+		return m_camera_moved;
+	}
 
 	bool viewport_window::is_viewport_focused() const {
 		return m_viewport_focus;
@@ -93,6 +99,10 @@ namespace mini {
 
 			m_cam_yaw = m_cam_yaw - f_d_yaw;
 			m_cam_pitch = m_cam_pitch + f_d_pitch;
+
+			m_camera_moved = true;
+		} else {
+			m_camera_moved = false;
 		}
 
 		// camera uptading

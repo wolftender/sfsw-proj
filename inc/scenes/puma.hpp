@@ -16,8 +16,11 @@ namespace mini {
 				float q1, q2, q3, q4, q5;
 
 				puma_config_t() {
-					l1 = l2 = l3 = 1.0f;
-					q1 = q2 = q3 = q4 = q5 = 0.0f;
+					l1 = 3.5f;
+					l2 = 2.5f;
+					l3 = 2.0f;
+					q3 = 3.0f;
+					q1 = q2 = q4 = q5 = 0.0f;
 				}
 			};
 
@@ -42,6 +45,8 @@ namespace mini {
 			std::shared_ptr<model_object> m_arm_model;
 			std::shared_ptr<model_object> m_joint_model;
 
+			float m_distance;
+
 		public:
 			puma_scene(application_base& app);
 			puma_scene(const puma_scene&) = delete;
@@ -52,6 +57,8 @@ namespace mini {
 			virtual void render(app_context& context) override;
 			virtual void gui() override;
 			virtual void menu() override;
+
+			virtual void on_scroll(double offset_x, double offset_y) override;
 
 		private:
 			std::shared_ptr<triangle_mesh> m_make_effector_mesh();

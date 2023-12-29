@@ -26,7 +26,7 @@ void main () {
     vs_out.color = a_color;
     vs_out.uv = a_uv;
     vs_out.normal = a_normal;
-    vs_out.world_normal = (u_world * vec4(a_normal, 0.0)).xyz;
+    vs_out.world_normal = normalize((u_world * vec4(a_normal, 0.0)).xyz);
 
     vs_out.world_pos = world_pos.xyz;
     vs_out.view_pos = view_pos.xyz; 
