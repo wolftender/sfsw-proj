@@ -11,6 +11,7 @@
 #include "scenes/slerp.hpp"
 #include "scenes/gel.hpp"
 #include "scenes/ik.hpp"
+#include "scenes/puma.hpp"
 	
 namespace mini {
 	application::application() : 
@@ -40,7 +41,7 @@ namespace mini {
 		m_store.load_texture("slime_normal", "textures/slime_normal.png");
 		m_store.load_texture("duck_albedo", "textures/duck.png");
 
-		m_scene = std::make_unique<gel_scene>(*this);
+		m_scene = std::make_unique<puma_scene>(*this);
 	}
 
 	scene_base& application::get_scene() {
@@ -132,6 +133,10 @@ namespace mini {
 					m_load_scene_ik();
 					return;
 
+				case GLFW_KEY_F6:
+					m_load_scene_puma();
+					return;
+
 				default: 
 					break;
 			}
@@ -187,6 +192,10 @@ namespace mini {
 
 				if (ImGui::MenuItem("IK Demo", "Ctrl + Shift + F5", nullptr, true)) {
 					m_load_scene_ik();
+				}
+
+				if (ImGui::MenuItem("PUMA Demo", "Ctrl + Shift + F6", nullptr, true)) {
+					m_load_scene_puma();
 				}
 
 				ImGui::EndMenu();
@@ -266,6 +275,11 @@ namespace mini {
 
 	void application::m_load_scene_ik() {
 		m_scene = std::make_unique<ik_scene>(*this);
+		m_layout_ready = false;
+	}
+
+	void application::m_load_scene_puma() {
+		m_scene = std::make_unique<puma_scene>(*this);
 		m_layout_ready = false;
 	}
 }
