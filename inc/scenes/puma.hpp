@@ -11,6 +11,13 @@
 namespace mini {
 	class puma_scene : public scene_base {
 		private:
+			static constexpr glm::mat4x4 CONVERT_MTX = {
+				-1.0f,  0.0f, 0.0f, 0.0f,
+				 0.0f,  0.0f, 1.0f, 0.0f,
+				 0.0f, -1.0f, 0.0f, 0.0f,
+				 0.0f,  0.0f, 0.0f, 1.0f
+			};
+
 			struct puma_config_t {
 				float l1, l2, l3;
 				float q1, q2, q3, q4, q5;
@@ -24,6 +31,28 @@ namespace mini {
 				}
 			};
 
+			struct puma_target_t {
+				glm::vec3 position;
+				glm::quat rotation;
+				glm::vec3 euler_angles;
+				bool quat_mode;
+
+				puma_target_t() : position(0.0f), rotation(1.0f, 0.0f, 0.0f, 0.0f), 
+					euler_angles{0.0f, 0.0f, 0.0f}, quat_mode(false) { }
+
+				puma_target_t(const glm::vec3& position, const glm::quat& rotation) :
+					position(position), rotation(rotation), euler_angles(glm::eulerAngles(rotation)), 
+					quat_mode(false) { }
+
+				glm::mat4x4 build_matrix() {
+					glm::mat4x4 transform(1.0f);
+					transform = glm::translate(transform, position);
+					transform = transform * glm::mat4_cast(rotation);
+
+					return CONVERT_MTX * transform;
+				}
+			};
+
 			app_context& m_context1;
 			app_context m_context2;
 
@@ -32,6 +61,9 @@ namespace mini {
 
 			puma_config_t m_config1;
 			puma_config_t m_config2;
+
+			puma_target_t m_puma_start;
+			puma_target_t m_puma_end;
 
 			std::shared_ptr<grid_object> m_grid;
 
@@ -64,6 +96,7 @@ namespace mini {
 			std::shared_ptr<triangle_mesh> m_make_effector_mesh();
 
 			void m_draw_puma(app_context& context, const puma_config_t& config) const;
+			void m_draw_frame(app_context& context, const glm::mat4x4& transform) const;
 			void m_gui_settings();
 	};
 }

@@ -132,12 +132,12 @@ namespace mini {
 		return normalize(q);
 	}
 
-	float deg_to_rad(float deg) {
+	inline float deg_to_rad(float deg) {
 		constexpr auto pi = glm::pi<float>();
 		return (deg / 180.0f) * pi;
 	}
 
-	float rad_to_deg(float rad) {
+	inline float rad_to_deg(float rad) {
 		constexpr auto pi = glm::pi<float>();
 		return (rad / pi) * 180.0f;
 	}

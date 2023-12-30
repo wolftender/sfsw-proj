@@ -2,6 +2,16 @@
 #include "scenes/puma.hpp"
 
 namespace mini {
+	inline float deg_to_rad(float deg) {
+		constexpr auto pi = glm::pi<float>();
+		return (deg / 180.0f) * pi;
+	}
+
+	inline float rad_to_deg(float rad) {
+		constexpr auto pi = glm::pi<float>();
+		return (rad / pi) * 180.0f;
+	}
+
 	puma_scene::puma_scene(application_base& app) : 
 		scene_base(app), 
 		m_context1(app.get_context()),
@@ -93,13 +103,13 @@ namespace mini {
 		return glm::scale(id, vec);
 	}
 
-	void puma_scene::m_draw_puma(app_context& context, const puma_config_t& config) const {
-		constexpr auto AXIS_X = glm::vec3{ 1.0f, 0.0f, 0.0f };
-		constexpr auto AXIS_Y = glm::vec3{ 0.0f, 1.0f, 0.0f };
-		constexpr auto AXIS_Z = glm::vec3{ 0.0f, 0.0f, 1.0f };
-		constexpr auto PI = glm::pi<float>();
-		constexpr auto HPI = 0.5f * PI;
+	constexpr auto AXIS_X = glm::vec3{ 1.0f, 0.0f, 0.0f };
+	constexpr auto AXIS_Y = glm::vec3{ 0.0f, 1.0f, 0.0f };
+	constexpr auto AXIS_Z = glm::vec3{ 0.0f, 0.0f, 1.0f };
+	constexpr auto PI = glm::pi<float>();
+	constexpr auto HPI = 0.5f * PI;
 
+	void puma_scene::m_draw_puma(app_context& context, const puma_config_t& config) const {
 		std::array<glm::mat4x4, 4> arm_matrix;
 		std::array<glm::mat4x4, 5> joint_matrix;
 		glm::mat4x4 effector_matrix;
@@ -109,32 +119,39 @@ namespace mini {
 		effector_matrix = glm::mat4x4(1.0f);
 
 		// forward kinematics
-		joint_matrix[0] = rotation_mat(AXIS_X, HPI) * rotation_mat(AXIS_Z, config.q1);
-		arm_matrix[0] = rotation_mat(AXIS_X, HPI) * rotation_mat(AXIS_Z, config.q1);
+		joint_matrix[0] = rotation_mat(AXIS_X, HPI) * rotation_mat(AXIS_Z, -config.q1);
+		arm_matrix[0] = rotation_mat(AXIS_X, HPI) * rotation_mat(AXIS_Z, -config.q1);
 
 		joint_matrix[1] = joint_matrix[0] * translation_mat({ 0.0f, 0.0f, config.l1 }) * 
-			rotation_mat(AXIS_X, HPI - config.q2);
+			rotation_mat(AXIS_Y, -HPI + config.q2);
 		arm_matrix[1] = arm_matrix[0] * translation_mat({0.0f, 0.0f, config.l1}) * 
-			rotation_mat(AXIS_X, HPI - config.q2);
+			rotation_mat(AXIS_Y, -HPI + config.q2);
 
 		joint_matrix[2] = joint_matrix[1] * translation_mat({0.0f, 0.0f, config.q3 }) * 
-			rotation_mat(AXIS_X, HPI + config.q4);
+			rotation_mat(AXIS_Y, -HPI - config.q4);
 		arm_matrix[2] = arm_matrix[1] * translation_mat({ 0.0f, 0.0f, config.q3 }) *
-			rotation_mat(AXIS_X, HPI + config.q4);
+			rotation_mat(AXIS_Y, -HPI - config.q4);
 
 		joint_matrix[3] = joint_matrix[2] * translation_mat({ 0.0f, 0.0f, config.l2 }) * 
-			rotation_mat(AXIS_X, -HPI);
+			rotation_mat(AXIS_Y, HPI);
 		arm_matrix[3] = arm_matrix[2] * translation_mat({ 0.0f, 0.0f, config.l2 }) *
-			rotation_mat(AXIS_X, -HPI);
+			rotation_mat(AXIS_Y, HPI);
 
 		joint_matrix[4] = joint_matrix[3] * translation_mat({ 0.0f, 0.0f, config.l3 });
 
-		joint_matrix[1] = joint_matrix[1] * rotation_mat(AXIS_Y, HPI) * translation_mat({ 0.0f, 0.0f, -0.35f });
-		joint_matrix[2] = joint_matrix[2] * rotation_mat(AXIS_Y, HPI) * translation_mat({ 0.0f, 0.0f, -0.35f });
+		joint_matrix[1] = joint_matrix[1] * rotation_mat(AXIS_X, HPI) * translation_mat({ 0.0f, 0.0f, -0.35f });
+		joint_matrix[2] = joint_matrix[2] * rotation_mat(AXIS_X, HPI) * translation_mat({ 0.0f, 0.0f, -0.35f });
 		joint_matrix[3] = joint_matrix[3] * translation_mat({ 0.0f, 0.0f, -0.35f });
 		joint_matrix[4] = joint_matrix[4] * translation_mat({ 0.0f, 0.0f, -0.35f });
 
-		effector_matrix = arm_matrix[3] * translation_mat({ 0.0f, 0.0f, config.l3 }) * rotation_mat(AXIS_Z, -config.q5);
+		constexpr glm::mat4x4 EFFECTOR_TO_WORLD = {
+			0.0f, 0.0f, 1.0f, 0.0f,
+			0.0f, 1.0f, 0.0f, 0.0f,
+			1.0f, 0.0f, 0.0f, 0.0f,
+			0.0f, 0.0f, 0.0f, 1.0f
+		};
+
+		effector_matrix = arm_matrix[3] * translation_mat({ 0.0f, 0.0f, config.l3 }) * rotation_mat(AXIS_Z, -config.q5) * EFFECTOR_TO_WORLD;
 
 		arm_matrix[0] = arm_matrix[0] * scale_mat({ 1.0f, 1.0f, config.l1 });
 		arm_matrix[1] = arm_matrix[1] * scale_mat({ 1.0f, 1.0f, config.q3 });
@@ -148,10 +165,14 @@ namespace mini {
 		for (const auto& mat : arm_matrix) {
 			context.draw(m_arm_model, mat);
 		}
-		
-		context.draw(m_effector_model_y, effector_matrix * translation_mat({ 0.0f, 0.6f, 0.0f }));
-		context.draw(m_effector_model_z, effector_matrix * rotation_mat(AXIS_Z, HPI) * translation_mat({ 0.0f, 0.6f, 0.0f }));
-		context.draw(m_effector_model_x, effector_matrix * rotation_mat(AXIS_X, HPI) * translation_mat({ 0.0f, 0.6f, 0.0f }));
+
+		m_draw_frame(context, effector_matrix);
+	}
+
+	void puma_scene::m_draw_frame(app_context& context, const glm::mat4x4& transform) const {
+		context.draw(m_effector_model_y, transform * translation_mat({ 0.0f, 0.8f, 0.0f }));
+		context.draw(m_effector_model_z, transform * rotation_mat(AXIS_X, HPI) * translation_mat({ 0.0f, 0.8f, 0.0f }));
+		context.draw(m_effector_model_x, transform * rotation_mat(AXIS_Z, -HPI) * translation_mat({ 0.0f, 0.8f, 0.0f }));
 	}
 
 	void puma_scene::render(app_context& context) {
@@ -167,6 +188,12 @@ namespace mini {
 		if (m_arm_mesh) {
 			m_draw_puma(m_context1, m_config1);
 			m_draw_puma(m_context2, m_config2);
+
+			m_draw_frame(m_context1, m_puma_start.build_matrix());
+			m_draw_frame(m_context1, m_puma_end.build_matrix());
+
+			m_draw_frame(m_context2, m_puma_start.build_matrix());
+			m_draw_frame(m_context2, m_puma_end.build_matrix());
 		}
 
 		m_context2.display(false, true);
@@ -176,6 +203,90 @@ namespace mini {
 		m_gui_settings();
 		m_viewport1.display();
 		m_viewport2.display();
+	}
+
+	inline void angle_clamp(glm::vec3& euler) {
+		if (euler.x > 180.0f) {
+			euler.x = -180.0f + (euler.x - floorf(euler.x / 180.0f) * 180.0f);
+		}
+
+		if (euler.y > 180.0f) {
+			euler.y = -180.0f + (euler.y - floorf(euler.y / 180.0f) * 180.0f);
+		}
+
+		if (euler.z > 180.0f) {
+			euler.z = -180.0f + (euler.z - floorf(euler.z / 180.0f) * 180.0f);
+		}
+
+		if (euler.x < -180.0f) {
+			euler.x = 180.0f + (euler.x + floorf(fabsf(euler.x) / 180.0f) * 180.0f);
+		}
+
+		if (euler.y < -180.0f) {
+			euler.y = 180.0f + (euler.y + floorf(fabsf(euler.y) / 180.0f) * 180.0f);
+		}
+
+		if (euler.z < -180.0f) {
+			euler.z = 180.0f + (euler.z + floorf(fabsf(euler.z) / 180.0f) * 180.0f);
+		}
+	}
+
+	inline void joint_rotation_editor(const std::string_view id, glm::quat& q, glm::vec3& e, bool& quat_mode) {
+		std::string id_checkbox = std::format("##_{}_checkbox", id);
+		std::string id_quat_x = std::format("##_{}_qx", id);
+		std::string id_quat_y = std::format("##_{}_qy", id);
+		std::string id_quat_z = std::format("##_{}_qz", id);
+		std::string id_quat_w = std::format("##_{}_qw", id);
+
+		gui::prefix_label("Quaternion Input: ", 250.0f);
+		ImGui::Checkbox(id_checkbox.c_str(), &quat_mode);
+
+		bool changed = false;
+
+		if (quat_mode) {
+			gui::prefix_label("w: ", 250.0f);
+			changed = ImGui::InputFloat(id_quat_w.c_str(), &q.w) || changed;
+
+			gui::prefix_label("x: ", 250.0f);
+			changed = ImGui::InputFloat(id_quat_x.c_str(), &q.x) || changed;
+
+			gui::prefix_label("y: ", 250.0f);
+			changed = ImGui::InputFloat(id_quat_y.c_str(), &q.y) || changed;
+
+			gui::prefix_label("z: ", 250.0f);
+			changed = ImGui::InputFloat(id_quat_z.c_str(), &q.z) || changed;
+
+			// convert quat to euler
+			if (changed) {
+				e = glm::eulerAngles(glm::quat(q.w, q.x, q.y, q.z));
+
+				e[0] = rad_to_deg(e[0]);
+				e[1] = rad_to_deg(e[1]);
+				e[2] = rad_to_deg(e[2]);
+			}
+		} else {
+			gui::prefix_label("x: ", 250.0f);
+			changed = ImGui::InputFloat(id_quat_x.c_str(), &e.x) || changed;
+
+			gui::prefix_label("y: ", 250.0f);
+			changed = ImGui::InputFloat(id_quat_y.c_str(), &e.y) || changed;
+
+			gui::prefix_label("z: ", 250.0f);
+			changed = ImGui::InputFloat(id_quat_z.c_str(), &e.z) || changed;
+
+			// convert euler to quat
+			if (changed) {
+				angle_clamp(e);
+
+				glm::quat rotation = { 1.0f, 0.0f, 0.0f, 0.0f };
+
+				rotation = rotation * glm::angleAxis(deg_to_rad(e[2]), glm::vec3{ 0.0f, 0.0f, 1.0f });
+				rotation = rotation * glm::angleAxis(deg_to_rad(e[1]), glm::vec3{ 0.0f, 1.0f, 0.0f });
+				rotation = rotation * glm::angleAxis(deg_to_rad(e[0]), glm::vec3{ 1.0f, 0.0f, 0.0f });
+
+				q = rotation;
+			}
+		}
 	}
 
 	void puma_scene::m_gui_settings() {
@@ -188,11 +299,53 @@ namespace mini {
 		auto max = ImGui::GetWindowContentRegionMax();
 		auto width = max.x - min.x;
 
-		ImGui::SliderFloat("q1", &m_config1.q1, 0.0f, 10.0f);
-		ImGui::SliderFloat("q2", &m_config1.q2, 0.0f, 10.0f);
-		ImGui::SliderFloat("q3", &m_config1.q3, 0.0f, 10.0f);
-		ImGui::SliderFloat("q4", &m_config1.q4, 0.0f, 10.0f);
-		ImGui::SliderFloat("q5", &m_config1.q5, 0.0f, 10.0f);
+		ImGui::BeginChild("Start Position", ImVec2(width * 0.2f, 0));
+
+		if (ImGui::CollapsingHeader("Start Position", ImGuiTreeNodeFlags_DefaultOpen)) {
+			gui::vector_editor_2("start_pos", m_puma_start.position);
+		}
+
+		ImGui::EndChild();
+		ImGui::SameLine();
+
+		ImGui::BeginChild("Start Rotation", ImVec2(width * 0.2f, 0));
+
+		if (ImGui::CollapsingHeader("Start Rotation", ImGuiTreeNodeFlags_DefaultOpen)) {
+			joint_rotation_editor("start_rot", m_puma_start.rotation, m_puma_start.euler_angles, m_puma_start.quat_mode);
+		}
+
+		ImGui::EndChild();
+		ImGui::SameLine();
+
+		ImGui::BeginChild("End Position", ImVec2(width * 0.2f, 0));
+
+		if (ImGui::CollapsingHeader("End Position", ImGuiTreeNodeFlags_DefaultOpen)) {
+			gui::vector_editor_2("end_pos", m_puma_end.position);
+		}
+
+		ImGui::EndChild();
+		ImGui::SameLine();
+
+		ImGui::BeginChild("End Rotation", ImVec2(width * 0.2f, 0));
+
+		if (ImGui::CollapsingHeader("End Rotation", ImGuiTreeNodeFlags_DefaultOpen)) {
+			joint_rotation_editor("start_rot", m_puma_end.rotation, m_puma_end.euler_angles, m_puma_end.quat_mode);
+		}
+
+		ImGui::EndChild();
+		ImGui::SameLine();
+
+		ImGui::BeginChild("Simulation Control", ImVec2(width * 0.2f, 0));
+
+		if (ImGui::CollapsingHeader("Simulation Control", ImGuiTreeNodeFlags_DefaultOpen)) {
+			ImGui::SliderFloat("q1", &m_config1.q1, 0.0f, 10.0f);
+			ImGui::SliderFloat("q2", &m_config1.q2, 0.0f, 10.0f);
+			ImGui::SliderFloat("q3", &m_config1.q3, 0.0f, 10.0f);
+			ImGui::SliderFloat("q4", &m_config1.q4, 0.0f, 10.0f);
+			ImGui::SliderFloat("q5", &m_config1.q5, 0.0f, 10.0f);
+		}
+
+		ImGui::EndChild();
 
 		ImGui::End();
 		ImGui::PopStyleVar(1);
