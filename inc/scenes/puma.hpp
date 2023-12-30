@@ -20,14 +20,14 @@ namespace mini {
 
 			struct puma_config_t {
 				float l1, l2, l3;
-				float q1, q2, q3, q4, q5;
+				float q1, q2, q3, q4, q5, q6;
 
 				puma_config_t() {
 					l1 = 3.5f;
 					l2 = 2.5f;
 					l3 = 2.0f;
 					q3 = 3.0f;
-					q1 = q2 = q4 = q5 = 0.0f;
+					q1 = q2 = q4 = q5 = q6 = 0.0f;
 				}
 			};
 
@@ -44,12 +44,16 @@ namespace mini {
 					position(position), rotation(rotation), euler_angles(glm::eulerAngles(rotation)), 
 					quat_mode(false) { }
 
-				glm::mat4x4 build_matrix() {
+				glm::mat4x4 build_matrix_raw() const {
 					glm::mat4x4 transform(1.0f);
 					transform = glm::translate(transform, position);
 					transform = transform * glm::mat4_cast(rotation);
 
-					return CONVERT_MTX * transform;
+					return transform;
+				}
+
+				glm::mat4x4 build_matrix() const {
+					return CONVERT_MTX * build_matrix_raw();
 				}
 			};
 
@@ -70,12 +74,14 @@ namespace mini {
 			std::shared_ptr<triangle_mesh> m_effector_mesh;
 			std::shared_ptr<triangle_mesh> m_arm_mesh;
 			std::shared_ptr<triangle_mesh> m_joint_mesh;
+			std::shared_ptr<triangle_mesh> m_debug_mesh;
 
 			std::shared_ptr<model_object> m_effector_model_x;
 			std::shared_ptr<model_object> m_effector_model_y;
 			std::shared_ptr<model_object> m_effector_model_z;
 			std::shared_ptr<model_object> m_arm_model;
 			std::shared_ptr<model_object> m_joint_model;
+			std::shared_ptr<model_object> m_debug_model;
 
 			float m_distance;
 
@@ -95,8 +101,13 @@ namespace mini {
 		private:
 			std::shared_ptr<triangle_mesh> m_make_effector_mesh();
 
+			void m_solve_ik_dbg(app_context& context, puma_config_t& config, const puma_target_t& target) const;
+			void m_solve_ik(puma_config_t& config, const puma_target_t& target) const;
+		
 			void m_draw_puma(app_context& context, const puma_config_t& config) const;
 			void m_draw_frame(app_context& context, const glm::mat4x4& transform) const;
+			void m_draw_debug(app_context& context, const glm::vec3& position) const;
+
 			void m_gui_settings();
 	};
 }

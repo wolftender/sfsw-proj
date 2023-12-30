@@ -1,6 +1,8 @@
 #include "gui.hpp"
 #include "scenes/puma.hpp"
 
+#include <glm/gtx/vector_angle.hpp>
+
 namespace mini {
 	inline float deg_to_rad(float deg) {
 		constexpr auto pi = glm::pi<float>();
@@ -46,6 +48,10 @@ namespace mini {
 			m_effector_model_z->set_surface_color({ 0.0f, 0.0f, 1.0f, 1.0f });
 			m_arm_model->set_surface_color({ 0.0f, 1.0f, 0.0f, 1.0f });
 			m_joint_model->set_surface_color({0.0f, 0.0f, 1.0f, 1.0f});
+
+			m_debug_mesh = triangle_mesh::make_cube_mesh();
+			m_debug_model = std::make_shared<model_object>(m_debug_mesh, puma_shader);
+			m_debug_model->set_surface_color({ 0.0f, 0.0f, 1.0f, 1.0f });
 		}
 
 		auto camera = std::make_unique<default_camera>();
@@ -76,6 +82,8 @@ namespace mini {
 			m_viewport1.set_cam_pitch(m_viewport2.get_cam_pitch());
 			m_viewport1.set_cam_yaw(m_viewport2.get_cam_yaw());
 		}
+
+		//m_solve_ik(m_config1, m_puma_start);
 	}
 
 	inline void setup_light(app_context& context) {
@@ -109,6 +117,97 @@ namespace mini {
 	constexpr auto PI = glm::pi<float>();
 	constexpr auto HPI = 0.5f * PI;
 
+	void puma_scene::m_solve_ik_dbg(app_context& context, puma_config_t& config, const puma_target_t& target) const {
+		auto p0 = glm::vec3{ 0.0f, 0.0f, 0.0f };
+		auto p1 = glm::vec3{ 0.0f, 0.0f, config.l1 };
+		auto p4 = target.position;
+
+		auto xdir = glm::vec3(target.build_matrix_raw() * glm::vec4{ 1.0f, 0.0f, 0.0f, 0.0f });
+		auto ydir = glm::vec3(target.build_matrix_raw() * glm::vec4{ 0.0f, 1.0f, 0.0f, 0.0f });
+		auto p3 = target.position - xdir * config.l3;
+
+		auto p_ = p4 - p3;
+		auto n = glm::normalize(glm::cross(p1 - p3, p1 - p0));
+
+		auto num = config.l2 * config.l2;
+		auto den = 1.0f;
+		den += (n.x * n.x) / (n.y * n.y);
+
+		float xv, yv, zv;
+
+		if (p_.z != 0.0f) {
+			auto m = (p_.x - p_.y * n.x / n.y) / p_.z;
+			den += m * m;
+
+			xv = glm::sqrt(num / den); // + or -
+			zv = -m * xv;
+			yv = -n.x * xv / n.y;
+		} else {
+			auto m = (p_.x - p_.y * n.x / n.y);
+			xv = 0.0f;
+			yv = 0.0f;
+			zv = config.l2;
+		}
+
+		// v = P2 - P3
+		// P2 = v + P3
+		auto p2 = glm::vec3{ p3.x + xv, p3.y + yv, p3.z + zv };
+		auto v12 = p2 - p1;
+		auto v23 = p3 - p2;
+		auto v34 = p4 - p3;
+
+		config.q1 = atan2f(p2.y, p2.x);
+		config.q2 = atan2f(v12.z, glm::length(glm::vec2{ v12.x, v12.y }));
+		config.q3 = glm::distance(p1, p2);
+		//config.q4 = atan2f(v23.z, glm::length(glm::vec2{ v23.x, v23.y })) + config.q2 + HPI;
+		
+		config.q4 = glm::orientedAngle(glm::normalize(v12), glm::normalize(v23), n) - HPI;
+	
+		glm::vec3 fwd2 = rotation_mat(n, config.q4) * glm::vec4(glm::normalize(v12), 0.0f);
+		config.q5 = glm::orientedAngle(glm::normalize(fwd2), xdir, -glm::normalize(v23));
+
+		glm::vec3 left4 = rotation_mat(glm::normalize(v23), -config.q5) * glm::vec4(n, 0.0f);
+		config.q6 = glm::orientedAngle(left4, ydir, xdir);
+
+		m_draw_debug(context, left4);
+		m_draw_debug(context, p2);
+		m_draw_debug(context, p3);
+		m_draw_debug(context, p4);
+	}
+
+	void puma_scene::m_solve_ik(puma_config_t& config, const puma_target_t& target) const {
+		/*auto p0 = glm::vec3{0.0f, 0.0f, 0.0f};
+		auto p1 = glm::vec3{ 0.0f, 0.0f, config.l1 };
+		auto p4 = target.position;
+
+		auto xdir = glm::vec3(target.build_matrix_raw() * glm::vec4{ 1.0f, 0.0f, 0.0f, 0.0f });
+		auto p3 = target.position - xdir * config.l3;
+
+		auto p_ = p4 - p3;
+		auto n = glm::normalize(glm::cross(p1 - p3, p1 - p0));
+
+		auto num = config.l2 * config.l2;
+		auto den = 1.0f;
+		den += (n.x * n.x) / (n.y * n.y);
+
+		auto m = (p_.x - p_.y * n.x / n.y) / p_.z;
+		den += m * m;
+
+		float xv = -glm::sqrt(num / den); // + or -
+		float zv = -m * xv;
+		float yv = -n.x * xv / n.y;
+
+		// v = P2 - P3
+		// P2 = v + P3
+		auto p2 = glm::vec3{ p3.x + xv, p3.y + yv, p3.z + zv };
+
+		auto v12 = p2 - p1;
+
+		config.q3 = glm::distance(p1, p2);
+		config.q1 = atan2f(p2.y, p2.x);
+		config.q2 = atan2f(v12.z, glm::length(glm::vec2{ v12.x, v12.y }));*/
+	}
+
 	void puma_scene::m_draw_puma(app_context& context, const puma_config_t& config) const {
 		std::array<glm::mat4x4, 4> arm_matrix;
 		std::array<glm::mat4x4, 5> joint_matrix;
@@ -130,10 +229,10 @@ namespace mini {
 		joint_matrix[2] = joint_matrix[1] * translation_mat({0.0f, 0.0f, config.q3 }) * 
 			rotation_mat(AXIS_Y, -HPI - config.q4);
 		arm_matrix[2] = arm_matrix[1] * translation_mat({ 0.0f, 0.0f, config.q3 }) *
-			rotation_mat(AXIS_Y, -HPI - config.q4);
+			rotation_mat(AXIS_Y, -HPI - config.q4) * rotation_mat(AXIS_Z, config.q5);
 
 		joint_matrix[3] = joint_matrix[2] * translation_mat({ 0.0f, 0.0f, config.l2 }) * 
-			rotation_mat(AXIS_Y, HPI);
+			rotation_mat(AXIS_Z, config.q5) * rotation_mat(AXIS_Y, HPI);
 		arm_matrix[3] = arm_matrix[2] * translation_mat({ 0.0f, 0.0f, config.l2 }) *
 			rotation_mat(AXIS_Y, HPI);
 
@@ -141,7 +240,7 @@ namespace mini {
 
 		joint_matrix[1] = joint_matrix[1] * rotation_mat(AXIS_X, HPI) * translation_mat({ 0.0f, 0.0f, -0.35f });
 		joint_matrix[2] = joint_matrix[2] * rotation_mat(AXIS_X, HPI) * translation_mat({ 0.0f, 0.0f, -0.35f });
-		joint_matrix[3] = joint_matrix[3] * translation_mat({ 0.0f, 0.0f, -0.35f });
+		joint_matrix[3] = joint_matrix[3] * rotation_mat(AXIS_Y, HPI) * translation_mat({ 0.0f, 0.0f, -0.35f });
 		joint_matrix[4] = joint_matrix[4] * translation_mat({ 0.0f, 0.0f, -0.35f });
 
 		constexpr glm::mat4x4 EFFECTOR_TO_WORLD = {
@@ -151,7 +250,7 @@ namespace mini {
 			0.0f, 0.0f, 0.0f, 1.0f
 		};
 
-		effector_matrix = arm_matrix[3] * translation_mat({ 0.0f, 0.0f, config.l3 }) * rotation_mat(AXIS_Z, -config.q5) * EFFECTOR_TO_WORLD;
+		effector_matrix = arm_matrix[3] * translation_mat({ 0.0f, 0.0f, config.l3 }) * rotation_mat(AXIS_Z, -config.q6) * EFFECTOR_TO_WORLD;
 
 		arm_matrix[0] = arm_matrix[0] * scale_mat({ 1.0f, 1.0f, config.l1 });
 		arm_matrix[1] = arm_matrix[1] * scale_mat({ 1.0f, 1.0f, config.q3 });
@@ -175,6 +274,10 @@ namespace mini {
 		context.draw(m_effector_model_x, transform * rotation_mat(AXIS_Z, -HPI) * translation_mat({ 0.0f, 0.8f, 0.0f }));
 	}
 
+	void puma_scene::m_draw_debug(app_context& context, const glm::vec3& position) const {
+		context.draw(m_debug_model, CONVERT_MTX * translation_mat(position) * scale_mat({0.1f, 0.1f, 0.1f}));
+	}
+
 	void puma_scene::render(app_context& context) {
 		setup_light(m_context1);
 		setup_light(m_context2);
@@ -194,6 +297,8 @@ namespace mini {
 
 			m_draw_frame(m_context2, m_puma_start.build_matrix());
 			m_draw_frame(m_context2, m_puma_end.build_matrix());
+
+			m_solve_ik_dbg(m_context1, m_config1, m_puma_start);
 		}
 
 		m_context2.display(false, true);
@@ -343,6 +448,7 @@ namespace mini {
 			ImGui::SliderFloat("q3", &m_config1.q3, 0.0f, 10.0f);
 			ImGui::SliderFloat("q4", &m_config1.q4, 0.0f, 10.0f);
 			ImGui::SliderFloat("q5", &m_config1.q5, 0.0f, 10.0f);
+			ImGui::SliderFloat("q6", &m_config1.q6, 0.0f, 10.0f);
 		}
 
 		ImGui::EndChild();
