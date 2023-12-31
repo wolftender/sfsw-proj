@@ -19,6 +19,11 @@ namespace mini {
 		m_context1(app.get_context()),
 		m_context2(video_mode_t(600, 400)), 
 		m_distance(10.0f),
+		m_effector1{ 0.0f, 0.0f, 0.0f },
+		m_effector2{ 0.0f, 0.0f, 0.0f },
+		m_manual_control(false),
+		m_follow_effector(false),
+		m_loop_animation(false),
 		m_viewport1(app, m_context1, "Config Interp."),
 		m_viewport2(app, m_context2, "Effector Interp.") {
 
@@ -60,7 +65,7 @@ namespace mini {
 	}
 
 	void puma_scene::layout(ImGuiID dockspace_id) {
-		auto dock_id_bottom = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Down, 0.3f, nullptr, &dockspace_id);
+		auto dock_id_bottom = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Down, 0.4f, nullptr, &dockspace_id);
 		auto dock_id_top_left = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Left, 0.5f, nullptr, &dockspace_id);
 
 		ImGui::DockBuilderDockWindow("Config Interp.", dockspace_id);
@@ -83,7 +88,17 @@ namespace mini {
 			m_viewport1.set_cam_yaw(m_viewport2.get_cam_yaw());
 		}
 
-		//m_solve_ik(m_config1, m_puma_start);
+		if (m_follow_effector) {
+			m_viewport1.set_camera_target(m_effector1);
+			m_viewport2.set_camera_target(m_effector2);
+		}
+
+		if (!m_manual_control) {
+			m_solve_ik(m_config1, m_meta1, m_puma_start);
+			m_solve_ik(m_config2, m_meta2, m_puma_start);
+		} else {
+			m_config2 = m_config1;
+		}
 	}
 
 	inline void setup_light(app_context& context) {
@@ -117,7 +132,7 @@ namespace mini {
 	constexpr auto PI = glm::pi<float>();
 	constexpr auto HPI = 0.5f * PI;
 
-	void puma_scene::m_solve_ik_dbg(app_context& context, puma_config_t& config, const puma_target_t& target) const {
+	void puma_scene::m_solve_ik(puma_config_t& config, puma_solution_meta_t& meta, const puma_target_t& target) const {
 		auto p0 = glm::vec3{ 0.0f, 0.0f, 0.0f };
 		auto p1 = glm::vec3{ 0.0f, 0.0f, config.l1 };
 		auto p4 = target.position;
@@ -160,55 +175,22 @@ namespace mini {
 		config.q2 = atan2f(v12.z, glm::length(glm::vec2{ v12.x, v12.y }));
 		config.q3 = glm::distance(p1, p2);
 		//config.q4 = atan2f(v23.z, glm::length(glm::vec2{ v23.x, v23.y })) + config.q2 + HPI;
-		
+
 		config.q4 = glm::orientedAngle(glm::normalize(v12), glm::normalize(v23), n) - HPI;
-	
+
 		glm::vec3 fwd2 = rotation_mat(n, config.q4) * glm::vec4(glm::normalize(v12), 0.0f);
 		config.q5 = glm::orientedAngle(glm::normalize(fwd2), xdir, -glm::normalize(v23));
 
 		glm::vec3 left4 = rotation_mat(glm::normalize(v23), -config.q5) * glm::vec4(n, 0.0f);
 		config.q6 = glm::orientedAngle(left4, ydir, xdir);
 
-		m_draw_debug(context, left4);
-		m_draw_debug(context, p2);
-		m_draw_debug(context, p3);
-		m_draw_debug(context, p4);
+		meta.p1 = p1;
+		meta.p2 = p2;
+		meta.p3 = p3;
+		meta.p4 = p4;
 	}
 
-	void puma_scene::m_solve_ik(puma_config_t& config, const puma_target_t& target) const {
-		/*auto p0 = glm::vec3{0.0f, 0.0f, 0.0f};
-		auto p1 = glm::vec3{ 0.0f, 0.0f, config.l1 };
-		auto p4 = target.position;
-
-		auto xdir = glm::vec3(target.build_matrix_raw() * glm::vec4{ 1.0f, 0.0f, 0.0f, 0.0f });
-		auto p3 = target.position - xdir * config.l3;
-
-		auto p_ = p4 - p3;
-		auto n = glm::normalize(glm::cross(p1 - p3, p1 - p0));
-
-		auto num = config.l2 * config.l2;
-		auto den = 1.0f;
-		den += (n.x * n.x) / (n.y * n.y);
-
-		auto m = (p_.x - p_.y * n.x / n.y) / p_.z;
-		den += m * m;
-
-		float xv = -glm::sqrt(num / den); // + or -
-		float zv = -m * xv;
-		float yv = -n.x * xv / n.y;
-
-		// v = P2 - P3
-		// P2 = v + P3
-		auto p2 = glm::vec3{ p3.x + xv, p3.y + yv, p3.z + zv };
-
-		auto v12 = p2 - p1;
-
-		config.q3 = glm::distance(p1, p2);
-		config.q1 = atan2f(p2.y, p2.x);
-		config.q2 = atan2f(v12.z, glm::length(glm::vec2{ v12.x, v12.y }));*/
-	}
-
-	void puma_scene::m_draw_puma(app_context& context, const puma_config_t& config) const {
+	void puma_scene::m_draw_puma(app_context& context, const puma_config_t& config, glm::vec3& effector_pos) const {
 		std::array<glm::mat4x4, 4> arm_matrix;
 		std::array<glm::mat4x4, 5> joint_matrix;
 		glm::mat4x4 effector_matrix;
@@ -251,6 +233,8 @@ namespace mini {
 		};
 
 		effector_matrix = arm_matrix[3] * translation_mat({ 0.0f, 0.0f, config.l3 }) * rotation_mat(AXIS_Z, -config.q6) * EFFECTOR_TO_WORLD;
+		effector_pos = arm_matrix[3] * translation_mat({ 0.0f, 0.0f, config.l3 }) * rotation_mat(AXIS_Z, -config.q6) * EFFECTOR_TO_WORLD * 
+			glm::vec4{ 0.0f, 0.0f, 0.0f, 1.0f };
 
 		arm_matrix[0] = arm_matrix[0] * scale_mat({ 1.0f, 1.0f, config.l1 });
 		arm_matrix[1] = arm_matrix[1] * scale_mat({ 1.0f, 1.0f, config.q3 });
@@ -289,16 +273,14 @@ namespace mini {
 		}
 
 		if (m_arm_mesh) {
-			m_draw_puma(m_context1, m_config1);
-			m_draw_puma(m_context2, m_config2);
+			m_draw_puma(m_context1, m_config1, m_effector1);
+			m_draw_puma(m_context2, m_config2, m_effector2);
 
 			m_draw_frame(m_context1, m_puma_start.build_matrix());
 			m_draw_frame(m_context1, m_puma_end.build_matrix());
 
 			m_draw_frame(m_context2, m_puma_start.build_matrix());
 			m_draw_frame(m_context2, m_puma_end.build_matrix());
-
-			m_solve_ik_dbg(m_context1, m_config1, m_puma_start);
 		}
 
 		m_context2.display(false, true);
@@ -336,6 +318,25 @@ namespace mini {
 		}
 	}
 
+	bool vector_editor_slider(const std::string& label, glm::vec3& vector) {
+		const std::string label_x = "##" + label + "_x";
+		const std::string label_y = "##" + label + "_y";
+		const std::string label_z = "##" + label + "_z";
+
+		bool changed = false;
+
+		gui::prefix_label("X: ", 100.0f);
+		changed = ImGui::DragFloat(label_x.c_str(), &vector[0], 0.1f, -10.0f, 10.0f) || changed;
+
+		gui::prefix_label("Y: ", 100.0f);
+		changed = ImGui::DragFloat(label_y.c_str(), &vector[1], 0.1f, -10.0f, 10.0f) || changed;
+
+		gui::prefix_label("Z: ", 100.0f);
+		changed = ImGui::DragFloat(label_z.c_str(), &vector[2], 0.1f, -10.0f, 10.0f) || changed;
+
+		return changed;
+	}
+
 	inline void joint_rotation_editor(const std::string_view id, glm::quat& q, glm::vec3& e, bool& quat_mode) {
 		std::string id_checkbox = std::format("##_{}_checkbox", id);
 		std::string id_quat_x = std::format("##_{}_qx", id);
@@ -350,20 +351,21 @@ namespace mini {
 
 		if (quat_mode) {
 			gui::prefix_label("w: ", 250.0f);
-			changed = ImGui::InputFloat(id_quat_w.c_str(), &q.w) || changed;
+			changed = ImGui::DragFloat(id_quat_w.c_str(), &q.w, 0.01f, 0.0f, 1.0f) || changed;
 
 			gui::prefix_label("x: ", 250.0f);
-			changed = ImGui::InputFloat(id_quat_x.c_str(), &q.x) || changed;
+			changed = ImGui::DragFloat(id_quat_x.c_str(), &q.x, 0.01f, 0.0f, 1.0f) || changed;
 
 			gui::prefix_label("y: ", 250.0f);
-			changed = ImGui::InputFloat(id_quat_y.c_str(), &q.y) || changed;
+			changed = ImGui::DragFloat(id_quat_y.c_str(), &q.y, 0.01f, 0.0f, 1.0f) || changed;
 
 			gui::prefix_label("z: ", 250.0f);
-			changed = ImGui::InputFloat(id_quat_z.c_str(), &q.z) || changed;
+			changed = ImGui::DragFloat(id_quat_z.c_str(), &q.z, 0.01f, 0.0f, 1.0f) || changed;
 
 			// convert quat to euler
 			if (changed) {
-				e = glm::eulerAngles(glm::quat(q.w, q.x, q.y, q.z));
+				q = glm::normalize(q);
+				e = glm::eulerAngles(q);
 
 				e[0] = rad_to_deg(e[0]);
 				e[1] = rad_to_deg(e[1]);
@@ -371,13 +373,13 @@ namespace mini {
 			}
 		} else {
 			gui::prefix_label("x: ", 250.0f);
-			changed = ImGui::InputFloat(id_quat_x.c_str(), &e.x) || changed;
+			changed = ImGui::DragFloat(id_quat_x.c_str(), &e.x, 1.0f, -90.0f, 90.0f) || changed;
 
 			gui::prefix_label("y: ", 250.0f);
-			changed = ImGui::InputFloat(id_quat_y.c_str(), &e.y) || changed;
+			changed = ImGui::DragFloat(id_quat_y.c_str(), &e.y, 1.0f, -90.0f, 90.0f) || changed;
 
 			gui::prefix_label("z: ", 250.0f);
-			changed = ImGui::InputFloat(id_quat_z.c_str(), &e.z) || changed;
+			changed = ImGui::DragFloat(id_quat_z.c_str(), &e.z, 1.0f, -90.0f, 90.0f) || changed;
 
 			// convert euler to quat
 			if (changed) {
@@ -404,51 +406,89 @@ namespace mini {
 		auto max = ImGui::GetWindowContentRegionMax();
 		auto width = max.x - min.x;
 
-		ImGui::BeginChild("Start Position", ImVec2(width * 0.2f, 0));
+		ImGui::BeginChild("Start Config", ImVec2(width * 0.33f, 0));
 
-		if (ImGui::CollapsingHeader("Start Position", ImGuiTreeNodeFlags_DefaultOpen)) {
-			gui::vector_editor_2("start_pos", m_puma_start.position);
+		if (ImGui::CollapsingHeader("Start Config", ImGuiTreeNodeFlags_DefaultOpen)) {
+			ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+			if (ImGui::TreeNode("Rotation")) {
+				joint_rotation_editor("start_rot", m_puma_start.rotation, m_puma_start.euler_angles, m_puma_start.quat_mode);
+				ImGui::TreePop();
+			}
+
+			ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+			if (ImGui::TreeNode("Position")) {
+				vector_editor_slider("start_pos", m_puma_start.position);
+				ImGui::TreePop();
+			}
+
+			if (ImGui::Button("Reset", ImVec2(glm::min(width * 0.3f, 150.0f), 0.0f))) {
+				m_puma_start = puma_target_t();
+			}
 		}
 
 		ImGui::EndChild();
 		ImGui::SameLine();
 
-		ImGui::BeginChild("Start Rotation", ImVec2(width * 0.2f, 0));
+		ImGui::BeginChild("End Config", ImVec2(width * 0.33f, 0));
 
-		if (ImGui::CollapsingHeader("Start Rotation", ImGuiTreeNodeFlags_DefaultOpen)) {
-			joint_rotation_editor("start_rot", m_puma_start.rotation, m_puma_start.euler_angles, m_puma_start.quat_mode);
+		if (ImGui::CollapsingHeader("End Config", ImGuiTreeNodeFlags_DefaultOpen)) {
+			ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+			if (ImGui::TreeNode("Rotation")) {
+				joint_rotation_editor("start_rot", m_puma_end.rotation, m_puma_end.euler_angles, m_puma_end.quat_mode);
+				ImGui::TreePop();
+			}
+
+			ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+			if (ImGui::TreeNode("Position")) {
+				vector_editor_slider("start_pos", m_puma_end.position);
+				ImGui::TreePop();
+			}
+
+			if (ImGui::Button("Reset", ImVec2(glm::min(width * 0.3f, 150.0f), 0.0f))) {
+				m_puma_end = puma_target_t();
+			}
 		}
 
 		ImGui::EndChild();
 		ImGui::SameLine();
 
-		ImGui::BeginChild("End Position", ImVec2(width * 0.2f, 0));
-
-		if (ImGui::CollapsingHeader("End Position", ImGuiTreeNodeFlags_DefaultOpen)) {
-			gui::vector_editor_2("end_pos", m_puma_end.position);
-		}
-
-		ImGui::EndChild();
-		ImGui::SameLine();
-
-		ImGui::BeginChild("End Rotation", ImVec2(width * 0.2f, 0));
-
-		if (ImGui::CollapsingHeader("End Rotation", ImGuiTreeNodeFlags_DefaultOpen)) {
-			joint_rotation_editor("start_rot", m_puma_end.rotation, m_puma_end.euler_angles, m_puma_end.quat_mode);
-		}
-
-		ImGui::EndChild();
-		ImGui::SameLine();
-
-		ImGui::BeginChild("Simulation Control", ImVec2(width * 0.2f, 0));
+		ImGui::BeginChild("Simulation Control", ImVec2(width * 0.33f, 0));
 
 		if (ImGui::CollapsingHeader("Simulation Control", ImGuiTreeNodeFlags_DefaultOpen)) {
-			ImGui::SliderFloat("q1", &m_config1.q1, 0.0f, 10.0f);
-			ImGui::SliderFloat("q2", &m_config1.q2, 0.0f, 10.0f);
-			ImGui::SliderFloat("q3", &m_config1.q3, 0.0f, 10.0f);
-			ImGui::SliderFloat("q4", &m_config1.q4, 0.0f, 10.0f);
-			ImGui::SliderFloat("q5", &m_config1.q5, 0.0f, 10.0f);
-			ImGui::SliderFloat("q6", &m_config1.q6, 0.0f, 10.0f);
+			gui::prefix_label("Manual Mode: ", 100.0f);
+			ImGui::Checkbox("##puma_manual", &m_manual_control);
+
+			gui::prefix_label("Follow Effector: ", 100.0f);
+			ImGui::Checkbox("##puma_cinematic", &m_follow_effector);
+
+			if (m_manual_control) {
+				gui::prefix_label("q1: ", 100.0f);
+				ImGui::SliderFloat("##puma_q1", &m_config1.q1, -PI, PI);
+
+				gui::prefix_label("q2: ", 100.0f);
+				ImGui::SliderFloat("##puma_q2", &m_config1.q2, -PI, PI);
+
+				gui::prefix_label("q3: ", 100.0f);
+				ImGui::SliderFloat("##puma_q3", &m_config1.q3, 0.0f, 10.0f);
+
+				gui::prefix_label("q4: ", 100.0f);
+				ImGui::SliderFloat("##puma_q4", &m_config1.q4, -PI, PI);
+
+				gui::prefix_label("q5: ", 100.0f);
+				ImGui::SliderFloat("##puma_q5", &m_config1.q5, -PI, PI);
+
+				gui::prefix_label("q6: ", 100.0f);
+				ImGui::SliderFloat("##puma_q6", &m_config1.q6, -PI, PI);
+			} else {
+				gui::prefix_label("Loop Animation: ", 100.0f);
+				ImGui::Checkbox("##puma_loop", &m_loop_animation);
+
+				ImGui::Button("Start", ImVec2(width * 0.1f, 25.0f));
+				ImGui::SameLine();
+				ImGui::Button("Pause", ImVec2(width * 0.1f, 25.0f));
+				ImGui::SameLine();
+				ImGui::Button("Reset", ImVec2(width * 0.1f, 25.0f));
+			}
 		}
 
 		ImGui::EndChild();

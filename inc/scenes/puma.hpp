@@ -6,6 +6,7 @@
 #include "mesh.hpp"
 #include "model.hpp"
 
+#include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 
 namespace mini {
@@ -29,6 +30,15 @@ namespace mini {
 					q3 = 3.0f;
 					q1 = q2 = q4 = q5 = q6 = 0.0f;
 				}
+			};
+
+			struct puma_solution_meta_t {
+				glm::vec3 p1, p2, p3, p4;
+				puma_solution_meta_t() : 
+					p1{ 0.0f, 0.0f, 0.0f },
+					p2{ 0.0f, 0.0f, 0.0f },
+					p3{ 0.0f, 0.0f, 0.0f },
+					p4{ 0.0f, 0.0f, 0.0f } { }
 			};
 
 			struct puma_target_t {
@@ -66,8 +76,18 @@ namespace mini {
 			puma_config_t m_config1;
 			puma_config_t m_config2;
 
+			puma_solution_meta_t m_meta1;
+			puma_solution_meta_t m_meta2;
+
+			glm::vec3 m_effector1;
+			glm::vec3 m_effector2;
+
 			puma_target_t m_puma_start;
 			puma_target_t m_puma_end;
+
+			// data for interpolation by angles
+			puma_config_t m_start_config;
+			puma_config_t m_end_config;
 
 			std::shared_ptr<grid_object> m_grid;
 
@@ -84,6 +104,9 @@ namespace mini {
 			std::shared_ptr<model_object> m_debug_model;
 
 			float m_distance;
+			bool m_manual_control;
+			bool m_follow_effector;
+			bool m_loop_animation;
 
 		public:
 			puma_scene(application_base& app);
@@ -101,10 +124,9 @@ namespace mini {
 		private:
 			std::shared_ptr<triangle_mesh> m_make_effector_mesh();
 
-			void m_solve_ik_dbg(app_context& context, puma_config_t& config, const puma_target_t& target) const;
-			void m_solve_ik(puma_config_t& config, const puma_target_t& target) const;
+			void m_solve_ik(puma_config_t& config, puma_solution_meta_t& meta, const puma_target_t& target) const;
 		
-			void m_draw_puma(app_context& context, const puma_config_t& config) const;
+			void m_draw_puma(app_context& context, const puma_config_t& config, glm::vec3& effector_pos) const;
 			void m_draw_frame(app_context& context, const glm::mat4x4& transform) const;
 			void m_draw_debug(app_context& context, const glm::vec3& position) const;
 
