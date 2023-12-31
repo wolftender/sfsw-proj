@@ -24,6 +24,8 @@ namespace mini {
 		m_manual_control(false),
 		m_follow_effector(false),
 		m_loop_animation(false),
+		m_flashlight(false),
+		m_debug_points(false),
 		m_viewport1(app, m_context1, "Config Interp."),
 		m_viewport2(app, m_context2, "Effector Interp.") {
 
@@ -32,9 +34,16 @@ namespace mini {
 
 		auto grid_shader = get_app().get_store().get_shader("grid_xz");
 		auto puma_shader = get_app().get_store().get_shader("puma");
+		auto point_shader = get_app().get_store().get_shader("point");
 
 		if (grid_shader) {
 			m_grid = std::make_shared<grid_object>(grid_shader);
+		}
+
+		if (point_shader) {
+			m_point_object = std::make_shared<billboard_object>(point_shader);
+			m_point_object->set_color_tint({ 1.0f, 0.0f, 0.0f, 1.0f });
+			m_point_object->set_size({ 16.0f, 16.0f });
 		}
 
 		if (puma_shader) {
@@ -99,16 +108,6 @@ namespace mini {
 		} else {
 			m_config2 = m_config1;
 		}
-	}
-
-	inline void setup_light(app_context& context) {
-		context.clear_lights();
-		auto& light = context.get_light(0);
-
-		light.color = { 1.0f, 1.0f, 1.0f };
-		light.intensity = 1.0f;
-		light.position = { -5.0f, -5.0f, -5.0f };
-		light.att_const = 1.0f;
 	}
 
 	inline glm::mat4x4 rotation_mat(const glm::vec3& axis, float angle) {
@@ -263,12 +262,27 @@ namespace mini {
 	}
 
 	void puma_scene::m_draw_debug(app_context& context, const glm::vec3& position) const {
-		context.draw(m_debug_model, CONVERT_MTX * translation_mat(position) * scale_mat({0.1f, 0.1f, 0.1f}));
+		context.draw(m_point_object, CONVERT_MTX * translation_mat(position));
+	}
+
+	void puma_scene::m_setup_light(app_context& context) const {
+		context.clear_lights();
+		auto& light = context.get_light(0);
+
+		light.color = { 1.0f, 1.0f, 1.0f };
+		light.intensity = 1.0f;
+		light.att_const = 1.0f;
+
+		if (m_flashlight) {
+			light.position = context.get_camera().get_position();
+		} else {
+			light.position = { -5.0f, -5.0f, -5.0f };
+		}
 	}
 
 	void puma_scene::render(app_context& context) {
-		setup_light(m_context1);
-		setup_light(m_context2);
+		m_setup_light(m_context1);
+		m_setup_light(m_context2);
 
 		if (m_grid) {
 			auto grid_model = glm::mat4x4(1.0f);
@@ -285,6 +299,18 @@ namespace mini {
 
 			m_draw_frame(m_context2, m_puma_start.build_matrix());
 			m_draw_frame(m_context2, m_puma_end.build_matrix());
+		}
+
+		if (m_debug_points) {
+			m_draw_debug(m_context1, m_meta1.p1);
+			m_draw_debug(m_context1, m_meta1.p2);
+			m_draw_debug(m_context1, m_meta1.p3);
+			m_draw_debug(m_context1, m_meta1.p4);
+
+			m_draw_debug(m_context2, m_meta2.p1);
+			m_draw_debug(m_context2, m_meta2.p2);
+			m_draw_debug(m_context2, m_meta2.p3);
+			m_draw_debug(m_context2, m_meta2.p4);
 		}
 
 		m_context2.display(false, true);
@@ -488,6 +514,12 @@ namespace mini {
 		if (ImGui::CollapsingHeader("Simulation Control", ImGuiTreeNodeFlags_DefaultOpen)) {
 			gui::prefix_label("Manual Mode: ", 100.0f);
 			ImGui::Checkbox("##puma_manual", &m_manual_control);
+
+			gui::prefix_label("Flashlight: ", 100.0f);
+			ImGui::Checkbox("##puma_flashlight", &m_flashlight);
+
+			gui::prefix_label("IK Debug: ", 100.0f);
+			ImGui::Checkbox("##puma_debug", &m_debug_points);
 
 			gui::prefix_label("Follow Effector: ", 100.0f);
 			ImGui::Checkbox("##puma_cinematic", &m_follow_effector);

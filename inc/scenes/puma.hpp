@@ -1,6 +1,7 @@
 #pragma once
 #include "scene.hpp"
 #include "viewport.hpp"
+#include "billboard.hpp"
 #include "grid.hpp"
 #include "gizmo.hpp"
 #include "mesh.hpp"
@@ -102,11 +103,14 @@ namespace mini {
 			std::shared_ptr<model_object> m_arm_model;
 			std::shared_ptr<model_object> m_joint_model;
 			std::shared_ptr<model_object> m_debug_model;
+			std::shared_ptr<billboard_object> m_point_object;
 
 			float m_distance;
 			bool m_manual_control;
 			bool m_follow_effector;
 			bool m_loop_animation;
+			bool m_flashlight;
+			bool m_debug_points;
 
 		public:
 			puma_scene(application_base& app);
@@ -130,6 +134,7 @@ namespace mini {
 			void m_draw_frame(app_context& context, const glm::mat4x4& transform) const;
 			void m_draw_debug(app_context& context, const glm::vec3& position) const;
 
+			void m_setup_light(app_context& context) const;
 			void m_gui_settings();
 	};
 }
