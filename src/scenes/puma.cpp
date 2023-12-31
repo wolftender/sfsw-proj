@@ -290,10 +290,37 @@ namespace mini {
 		m_context2.display(false, true);
 	}
 
+	template<typename... Args>
+	inline void padded_text(const char* fmt, const ImVec2& padding, Args... args) {
+		auto cursor_pos = ImGui::GetCursorPos();
+		ImGui::SetCursorPos(ImVec2(cursor_pos.x + padding.x, cursor_pos.y + padding.y));
+		ImGui::Text(fmt, args ...);
+	}
+
 	void puma_scene::gui() {
+		const auto overlay_handler = [](const puma_config_t& config, const puma_solution_meta_t& meta) {
+			if (ImGui::CollapsingHeader("Configuration")) {
+				ImGui::SetWindowSize(ImVec2(150, 180));
+				padded_text("q1 = %.4f", ImVec2(8.0f, 0.0f), config.q1);
+				padded_text("q2 = %.4f", ImVec2(8.0f, 0.0f), config.q2);
+				padded_text("q3 = %.4f", ImVec2(8.0f, 0.0f), config.q3);
+				padded_text("q4 = %.4f", ImVec2(8.0f, 0.0f), config.q4);
+				padded_text("q5 = %.4f", ImVec2(8.0f, 0.0f), config.q5);
+				padded_text("q6 = %.4f", ImVec2(8.0f, 0.0f), config.q6);
+
+				ImGui::Dummy(ImVec2(0.0f, 5.0f));
+			}
+		};
+
 		m_gui_settings();
-		m_viewport1.display();
-		m_viewport2.display();
+
+		m_viewport1.display([&]() {
+			overlay_handler(m_config1, m_meta1);
+		});
+
+		m_viewport2.display([&]() {
+			overlay_handler(m_config2, m_meta2);
+		});
 	}
 
 	inline void angle_clamp(glm::vec3& euler) {

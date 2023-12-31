@@ -51,6 +51,7 @@ namespace mini {
 
 			void update(float delta_time);
 			void display();
+			void display(std::optional<std::function<void()>> overlay);
 			void configure();
 	};
 }

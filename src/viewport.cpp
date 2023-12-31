@@ -123,12 +123,29 @@ namespace mini {
 	}
 
 	void viewport_window::display() {
+		display({});
+	}
+
+	void viewport_window::display(std::optional<std::function<void()>> overlay) {
 		auto& context = m_context;
 
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(320, 240));
 		ImGui::Begin(m_name.c_str(), NULL);
 		ImGui::SetWindowPos(ImVec2(30, 30), ImGuiCond_Once);
 		ImGui::SetWindowSize(ImVec2(640, 480), ImGuiCond_Once);
+
+		if (auto handler = overlay) {
+			auto cursor_pos = ImGui::GetCursorPos();
+			ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.0f, 0.0f, 0.0f, 0.6f));
+			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
+			ImGui::BeginChild("Overlay", ImVec2(150.0f, 0.0f), ImGuiChildFlags_AutoResizeY);
+			
+			(*handler)();
+
+			ImGui::EndChild();
+			ImGui::PopStyleColor(2);
+			ImGui::SetCursorPos(cursor_pos);
+		}
 
 		if (ImGui::IsWindowFocused()) {
 			m_viewport_focus = true;
