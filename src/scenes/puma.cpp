@@ -132,6 +132,10 @@ namespace mini {
 	constexpr auto PI = glm::pi<float>();
 	constexpr auto HPI = 0.5f * PI;
 
+	inline float oriented_angle(const glm::vec3& a, const glm::vec3& b, const glm::vec3& n) {
+		return atan2f(glm::dot(glm::cross(a, b), n), glm::dot(a, b));
+	}
+
 	void puma_scene::m_solve_ik(puma_config_t& config, puma_solution_meta_t& meta, const puma_target_t& target) const {
 		auto p0 = glm::vec3{ 0.0f, 0.0f, 0.0f };
 		auto p1 = glm::vec3{ 0.0f, 0.0f, config.l1 };
@@ -176,13 +180,13 @@ namespace mini {
 		config.q3 = glm::distance(p1, p2);
 		//config.q4 = atan2f(v23.z, glm::length(glm::vec2{ v23.x, v23.y })) + config.q2 + HPI;
 
-		config.q4 = glm::orientedAngle(glm::normalize(v12), glm::normalize(v23), n) - HPI;
+		config.q4 = oriented_angle(glm::normalize(v12), glm::normalize(v23), n) - HPI;
 
 		glm::vec3 fwd2 = rotation_mat(n, config.q4) * glm::vec4(glm::normalize(v12), 0.0f);
-		config.q5 = glm::orientedAngle(glm::normalize(fwd2), xdir, -glm::normalize(v23));
+		config.q5 = oriented_angle(glm::normalize(fwd2), xdir, -glm::normalize(v23));
 
 		glm::vec3 left4 = rotation_mat(glm::normalize(v23), -config.q5) * glm::vec4(n, 0.0f);
-		config.q6 = glm::orientedAngle(left4, ydir, xdir);
+		config.q6 = oriented_angle(left4, ydir, xdir);
 
 		meta.p1 = p1;
 		meta.p2 = p2;
