@@ -100,6 +100,9 @@ namespace mini {
 		if (m_follow_effector) {
 			m_viewport1.set_camera_target(m_effector1);
 			m_viewport2.set_camera_target(m_effector2);
+		} else {
+			m_viewport1.set_camera_target({ 0.0f, 0.0f, 0.0f });
+			m_viewport2.set_camera_target({ 0.0f, 0.0f, 0.0f });
 		}
 
 		if (!m_manual_control) {
