@@ -35,9 +35,15 @@ namespace mini {
 		auto grid_shader = get_app().get_store().get_shader("grid_xz");
 		auto puma_shader = get_app().get_store().get_shader("puma");
 		auto point_shader = get_app().get_store().get_shader("point");
+		auto line_shader = get_app().get_store().get_shader("line");
 
 		if (grid_shader) {
 			m_grid = std::make_shared<grid_object>(grid_shader);
+		}
+
+		if (line_shader) {
+			m_debug_lines1 = m_make_debug_mesh(line_shader);
+			m_debug_lines2 = m_make_debug_mesh(line_shader);
 		}
 
 		if (point_shader) {
@@ -173,16 +179,18 @@ namespace mini {
 		// v = P2 - P3
 		// P2 = v + P3
 		auto p2 = glm::vec3{ p3.x + xv, p3.y + yv, p3.z + zv };
+		auto v01 = p1;
 		auto v12 = p2 - p1;
 		auto v23 = p3 - p2;
 		auto v34 = p4 - p3;
 
-		config.q1 = atan2f(p2.y, p2.x);
-		config.q2 = atan2f(v12.z, glm::length(glm::vec2{ v12.x, v12.y }));
+		config.q1 = atan2f(p3.y, p3.x);
+		config.q2 = HPI - oriented_angle(glm::normalize(v01), glm::normalize(v12), n);
 		config.q3 = glm::distance(p1, p2);
 		//config.q4 = atan2f(v23.z, glm::length(glm::vec2{ v23.x, v23.y })) + config.q2 + HPI;
 
-		config.q4 = oriented_angle(glm::normalize(v12), glm::normalize(v23), n) - HPI;
+		float a4 = oriented_angle(glm::normalize(v12), glm::normalize(v23), n);
+		config.q4 = a4 - HPI;
 
 		glm::vec3 fwd2 = rotation_mat(n, config.q4) * glm::vec4(glm::normalize(v12), 0.0f);
 		config.q5 = oriented_angle(glm::normalize(fwd2), xdir, -glm::normalize(v23));
@@ -268,6 +276,20 @@ namespace mini {
 		context.draw(m_point_object, CONVERT_MTX * translation_mat(position));
 	}
 
+	void puma_scene::m_draw_debug_mesh(app_context& context, std::shared_ptr<segments_array> mesh, 
+		puma_solution_meta_t& meta) const {
+
+		mesh->update_point(0, { 0.0f, 0.0f, 0.0f });
+		mesh->update_point(1, m_meta1.p1);
+		mesh->update_point(2, m_meta1.p2);
+		mesh->update_point(3, m_meta1.p3);
+		mesh->update_point(4, m_meta1.p4);
+		mesh->update_point(5, m_meta1.p1 + glm::normalize(glm::cross(m_meta1.p1 - m_meta1.p3, m_meta1.p1)));
+		mesh->rebuild_buffers();
+
+		context.draw(mesh, CONVERT_MTX);
+	}
+
 	void puma_scene::m_setup_light(app_context& context) const {
 		context.clear_lights();
 		auto& light = context.get_light(0);
@@ -305,6 +327,9 @@ namespace mini {
 		}
 
 		if (m_debug_points) {
+			m_draw_debug_mesh(m_context1, m_debug_lines1, m_meta1);
+			m_draw_debug_mesh(m_context2, m_debug_lines2, m_meta2);
+
 			m_draw_debug(m_context1, m_meta1.p1);
 			m_draw_debug(m_context1, m_meta1.p2);
 			m_draw_debug(m_context1, m_meta1.p3);
@@ -639,5 +664,18 @@ namespace mini {
 		}
 
 		return std::make_shared<triangle_mesh>(positions, normals, uvs, indices);
+	}
+
+	std::shared_ptr<segments_array> puma_scene::m_make_debug_mesh(std::shared_ptr<shader_program> line_shader) {
+		auto mesh = std::make_shared<segments_array>(line_shader, 6);
+		mesh->set_color({ 0.950f, 0.388f, 0.0380f, 1.0f });
+		mesh->add_segment(0, 1);
+		mesh->add_segment(1, 2);
+		mesh->add_segment(2, 3);
+		mesh->add_segment(3, 4);
+		mesh->add_segment(1, 5);
+		mesh->set_ignore_depth(true);
+
+		return mesh;
 	}
 }

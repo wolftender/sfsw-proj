@@ -12,6 +12,7 @@ namespace mini {
 		m_position_buffer = 0;
 		m_index_buffer = 0;
 		m_ready = false;
+		m_ignore_depth = false;
 		m_line_width = 2.0f;
 
 		m_color = { 1.0f, 1.0f, 1.0f, 1.0f };
@@ -19,6 +20,14 @@ namespace mini {
 
 	segments_array::~segments_array() {
 		m_free_buffers();
+	}
+
+	bool segments_array::get_ignore_depth() const {
+		return m_ignore_depth;
+	}
+
+	void segments_array::set_ignore_depth(bool ignore) {
+		m_ignore_depth = ignore;
 	}
 
 	float segments_array::get_line_width() const {
@@ -96,8 +105,16 @@ namespace mini {
 		m_line_shader->set_uniform("u_line_width", m_line_width);
 		m_line_shader->set_uniform("u_color", m_color);
 
+		if (m_ignore_depth) {
+			glDisable(GL_DEPTH_TEST);
+		}
+
 		glDrawElements(GL_LINES, m_indices.size(), GL_UNSIGNED_INT, 0);
 		glBindVertexArray(0);
+		
+		if (m_ignore_depth) {
+			glEnable(GL_DEPTH_TEST);
+		}
 	}
 
 	void segments_array::m_rebuild_buffers() {

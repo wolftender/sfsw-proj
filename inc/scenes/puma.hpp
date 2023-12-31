@@ -6,6 +6,7 @@
 #include "gizmo.hpp"
 #include "mesh.hpp"
 #include "model.hpp"
+#include "segments.hpp"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -104,6 +105,8 @@ namespace mini {
 			std::shared_ptr<model_object> m_joint_model;
 			std::shared_ptr<model_object> m_debug_model;
 			std::shared_ptr<billboard_object> m_point_object;
+			std::shared_ptr<segments_array> m_debug_lines1;
+			std::shared_ptr<segments_array> m_debug_lines2;
 
 			float m_distance;
 			bool m_manual_control;
@@ -127,12 +130,16 @@ namespace mini {
 
 		private:
 			std::shared_ptr<triangle_mesh> m_make_effector_mesh();
+			std::shared_ptr<segments_array> m_make_debug_mesh(std::shared_ptr<shader_program> line_shader);
 
 			void m_solve_ik(puma_config_t& config, puma_solution_meta_t& meta, const puma_target_t& target) const;
 		
 			void m_draw_puma(app_context& context, const puma_config_t& config, glm::vec3& effector_pos) const;
 			void m_draw_frame(app_context& context, const glm::mat4x4& transform) const;
 			void m_draw_debug(app_context& context, const glm::vec3& position) const;
+
+			void m_draw_debug_mesh(app_context& context, std::shared_ptr<segments_array> mesh, 
+				puma_solution_meta_t& meta) const;
 
 			void m_setup_light(app_context& context) const;
 			void m_gui_settings();

@@ -15,6 +15,7 @@ namespace mini {
 			GLuint m_vao, m_position_buffer, m_index_buffer;
 
 			bool m_ready;
+			bool m_ignore_depth;
 
 			glm::vec4 m_color;
 			float m_line_width;
@@ -27,6 +28,9 @@ namespace mini {
 
 			segments_array(const segments_array&) = delete;
 			segments_array& operator=(const segments_array&) = delete;
+
+			bool get_ignore_depth() const;
+			void set_ignore_depth(bool ignore);
 
 			float get_line_width() const;
 			const glm::vec4& get_color() const;
