@@ -4,6 +4,12 @@
 #include <glm/gtx/vector_angle.hpp>
 
 namespace mini {
+	constexpr auto AXIS_X = glm::vec3{ 1.0f, 0.0f, 0.0f };
+	constexpr auto AXIS_Y = glm::vec3{ 0.0f, 1.0f, 0.0f };
+	constexpr auto AXIS_Z = glm::vec3{ 0.0f, 0.0f, 1.0f };
+	constexpr auto PI = glm::pi<float>();
+	constexpr auto HPI = 0.5f * PI;
+
 	inline float deg_to_rad(float deg) {
 		constexpr auto pi = glm::pi<float>();
 		return (deg / 180.0f) * pi;
@@ -101,6 +107,20 @@ namespace mini {
 		ImGui::DockBuilderDockWindow("Simulation Settings", dock_id_bottom);
 	}
 
+	inline float angle_lerp(float start, float end, float t) {
+		float d = end - start;
+
+		if (abs(d) > PI) {
+			if (start > 0.0f) {
+				end = 2.0f * PI + end;
+			} else {
+				end = -2.0f * PI + end;
+			}
+		}
+
+		return glm::mix(start, end, t);
+	}
+
 	void puma_scene::integrate(float delta_time) {
 		m_viewport1.update(delta_time);
 		m_viewport2.update(delta_time);
@@ -142,12 +162,12 @@ namespace mini {
 				}
 
 				// simply interpolate the angles for animation 1
-				m_config1.q1 = glm::mix(m_start_config.q1, m_end_config.q1, m_anim_time);
-				m_config1.q2 = glm::mix(m_start_config.q2, m_end_config.q2, m_anim_time);
-				m_config1.q3 = glm::mix(m_start_config.q3, m_end_config.q3, m_anim_time);
-				m_config1.q4 = glm::mix(m_start_config.q4, m_end_config.q4, m_anim_time);
-				m_config1.q5 = glm::mix(m_start_config.q5, m_end_config.q5, m_anim_time);
-				m_config1.q6 = glm::mix(m_start_config.q6, m_end_config.q6, m_anim_time);
+				m_config1.q1 = angle_lerp(m_start_config.q1, m_end_config.q1, m_anim_time);
+				m_config1.q2 = angle_lerp(m_start_config.q2, m_end_config.q2, m_anim_time);
+				m_config1.q3 = glm::mix(m_start_config.q3, m_end_config.q3, m_anim_time);    /// this is not an angle! ;)
+				m_config1.q4 = angle_lerp(m_start_config.q4, m_end_config.q4, m_anim_time);
+				m_config1.q5 = angle_lerp(m_start_config.q5, m_end_config.q5, m_anim_time);
+				m_config1.q6 = angle_lerp(m_start_config.q6, m_end_config.q6, m_anim_time);
 
 				// interpolate the end effector for animation 2
 				m_current_target.position = glm::mix(m_puma_start.position, m_puma_end.position, m_anim_time);
@@ -174,12 +194,6 @@ namespace mini {
 		constexpr glm::mat4x4 id(1.0f);
 		return glm::scale(id, vec);
 	}
-
-	constexpr auto AXIS_X = glm::vec3{ 1.0f, 0.0f, 0.0f };
-	constexpr auto AXIS_Y = glm::vec3{ 0.0f, 1.0f, 0.0f };
-	constexpr auto AXIS_Z = glm::vec3{ 0.0f, 0.0f, 1.0f };
-	constexpr auto PI = glm::pi<float>();
-	constexpr auto HPI = 0.5f * PI;
 
 	inline float oriented_angle(const glm::vec3& a, const glm::vec3& b, const glm::vec3& n) {
 		return atan2f(glm::dot(glm::cross(a, b), n), glm::dot(a, b));
