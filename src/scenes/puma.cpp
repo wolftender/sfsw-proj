@@ -26,6 +26,12 @@ namespace mini {
 		m_loop_animation(false),
 		m_flashlight(false),
 		m_debug_points(false),
+		m_begin_changed(false),
+		m_end_changed(false),
+		m_anim_time(0.0f),
+		m_anim_speed(0.5f),
+		m_anim_active(false),
+		m_anim_paused(false),
 		m_viewport1(app, m_context1, "Config Interp."),
 		m_viewport2(app, m_context2, "Effector Interp.") {
 
@@ -74,6 +80,13 @@ namespace mini {
 			m_debug_model->set_surface_color({ 0.0f, 0.0f, 1.0f, 1.0f });
 		}
 
+		// no uninitialized solutions
+		puma_solution_meta_t meta;
+		m_solve_ik(m_start_config, meta, m_puma_start);
+		m_solve_ik(m_end_config, meta, m_puma_end);
+		m_solve_ik(m_config1, m_meta1, m_puma_start);
+		m_solve_ik(m_config2, m_meta2, m_puma_start);
+
 		auto camera = std::make_unique<default_camera>();
 		camera->video_mode_change(get_app().get_context().get_video_mode());
 		get_app().get_context().set_camera(std::move(camera));
@@ -112,9 +125,37 @@ namespace mini {
 		}
 
 		if (!m_manual_control) {
-			m_solve_ik(m_config1, m_meta1, m_puma_start);
-			m_solve_ik(m_config2, m_meta2, m_puma_start);
+			if (m_anim_active) {
+				if (delta_time > 0.1f) {
+					delta_time = 0.1f;
+				}
+
+				if (!m_anim_paused) {
+					m_anim_time = m_anim_time + m_anim_speed * delta_time;
+					if (m_anim_time > 1.0f) {
+						if (m_loop_animation) {
+							m_anim_time = 0.0f;
+						} else {
+							m_anim_time = 1.0f;
+						}
+					}
+				}
+
+				// simply interpolate the angles for animation 1
+				m_config1.q1 = glm::mix(m_start_config.q1, m_end_config.q1, m_anim_time);
+				m_config1.q2 = glm::mix(m_start_config.q2, m_end_config.q2, m_anim_time);
+				m_config1.q3 = glm::mix(m_start_config.q3, m_end_config.q3, m_anim_time);
+				m_config1.q4 = glm::mix(m_start_config.q4, m_end_config.q4, m_anim_time);
+				m_config1.q5 = glm::mix(m_start_config.q5, m_end_config.q5, m_anim_time);
+				m_config1.q6 = glm::mix(m_start_config.q6, m_end_config.q6, m_anim_time);
+
+				// interpolate the end effector for animation 2
+				m_current_target.position = glm::mix(m_puma_start.position, m_puma_end.position, m_anim_time);
+				m_current_target.rotation = glm::slerp(m_puma_start.rotation, m_puma_end.rotation, m_anim_time);
+				m_solve_ik(m_config2, m_meta2, m_current_target);
+			}
 		} else {
+			m_anim_active = false;
 			m_config2 = m_config1;
 		}
 	}
@@ -280,11 +321,11 @@ namespace mini {
 		puma_solution_meta_t& meta) const {
 
 		mesh->update_point(0, { 0.0f, 0.0f, 0.0f });
-		mesh->update_point(1, m_meta1.p1);
-		mesh->update_point(2, m_meta1.p2);
-		mesh->update_point(3, m_meta1.p3);
-		mesh->update_point(4, m_meta1.p4);
-		mesh->update_point(5, m_meta1.p1 + glm::normalize(glm::cross(m_meta1.p1 - m_meta1.p3, m_meta1.p1)));
+		mesh->update_point(1, meta.p1);
+		mesh->update_point(2, meta.p2);
+		mesh->update_point(3, meta.p3);
+		mesh->update_point(4, meta.p4);
+		mesh->update_point(5, meta.p1 + glm::normalize(glm::cross(meta.p1 - meta.p3, meta.p1)));
 		mesh->rebuild_buffers();
 
 		context.draw(mesh, CONVERT_MTX);
@@ -327,13 +368,16 @@ namespace mini {
 		}
 
 		if (m_debug_points) {
-			m_draw_debug_mesh(m_context1, m_debug_lines1, m_meta1);
-			m_draw_debug_mesh(m_context2, m_debug_lines2, m_meta2);
+			if (!m_anim_active) {
+				m_draw_debug_mesh(m_context1, m_debug_lines1, m_meta1);
 
-			m_draw_debug(m_context1, m_meta1.p1);
-			m_draw_debug(m_context1, m_meta1.p2);
-			m_draw_debug(m_context1, m_meta1.p3);
-			m_draw_debug(m_context1, m_meta1.p4);
+				m_draw_debug(m_context1, m_meta1.p1);
+				m_draw_debug(m_context1, m_meta1.p2);
+				m_draw_debug(m_context1, m_meta1.p3);
+				m_draw_debug(m_context1, m_meta1.p4);
+			}
+
+			m_draw_debug_mesh(m_context2, m_debug_lines2, m_meta2);
 
 			m_draw_debug(m_context2, m_meta2.p1);
 			m_draw_debug(m_context2, m_meta2.p2);
@@ -422,7 +466,7 @@ namespace mini {
 		return changed;
 	}
 
-	inline void joint_rotation_editor(const std::string_view id, glm::quat& q, glm::vec3& e, bool& quat_mode) {
+	inline bool joint_rotation_editor(const std::string_view id, glm::quat& q, glm::vec3& e, bool& quat_mode) {
 		std::string id_checkbox = std::format("##_{}_checkbox", id);
 		std::string id_quat_x = std::format("##_{}_qx", id);
 		std::string id_quat_y = std::format("##_{}_qy", id);
@@ -479,6 +523,8 @@ namespace mini {
 				q = rotation;
 			}
 		}
+
+		return changed;
 	}
 
 	void puma_scene::m_gui_settings() {
@@ -493,21 +539,31 @@ namespace mini {
 
 		ImGui::BeginChild("Start Config", ImVec2(width * 0.33f, 0));
 
+		m_begin_changed = false;
+		m_end_changed = false;
+
 		if (ImGui::CollapsingHeader("Start Config", ImGuiTreeNodeFlags_DefaultOpen)) {
 			ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 			if (ImGui::TreeNode("Rotation")) {
-				joint_rotation_editor("start_rot", m_puma_start.rotation, m_puma_start.euler_angles, m_puma_start.quat_mode);
+				m_begin_changed = joint_rotation_editor("start_rot", m_puma_start.rotation, m_puma_start.euler_angles, m_puma_start.quat_mode) || m_begin_changed;
 				ImGui::TreePop();
 			}
 
 			ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 			if (ImGui::TreeNode("Position")) {
-				vector_editor_slider("start_pos", m_puma_start.position);
+				m_begin_changed = vector_editor_slider("start_pos", m_puma_start.position) || m_begin_changed;
 				ImGui::TreePop();
 			}
 
 			if (ImGui::Button("Reset", ImVec2(glm::min(width * 0.3f, 150.0f), 0.0f))) {
 				m_puma_start = puma_target_t();
+				m_begin_changed = true;
+			}
+
+			ImGui::SameLine();
+			if (ImGui::Button("Copy", ImVec2(glm::min(width * 0.3f, 150.0f), 0.0f))) {
+				m_puma_end = m_puma_start;
+				m_end_changed = true;
 			}
 		}
 
@@ -519,19 +575,59 @@ namespace mini {
 		if (ImGui::CollapsingHeader("End Config", ImGuiTreeNodeFlags_DefaultOpen)) {
 			ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 			if (ImGui::TreeNode("Rotation")) {
-				joint_rotation_editor("start_rot", m_puma_end.rotation, m_puma_end.euler_angles, m_puma_end.quat_mode);
+				m_end_changed = joint_rotation_editor("start_rot", m_puma_end.rotation, m_puma_end.euler_angles, m_puma_end.quat_mode) || m_end_changed;
 				ImGui::TreePop();
 			}
 
 			ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 			if (ImGui::TreeNode("Position")) {
-				vector_editor_slider("start_pos", m_puma_end.position);
+				m_end_changed = vector_editor_slider("start_pos", m_puma_end.position) || m_end_changed;
 				ImGui::TreePop();
 			}
 
 			if (ImGui::Button("Reset", ImVec2(glm::min(width * 0.3f, 150.0f), 0.0f))) {
 				m_puma_end = puma_target_t();
+				m_end_changed = true;
 			}
+
+			ImGui::SameLine();
+			if (ImGui::Button("Copy", ImVec2(glm::min(width * 0.3f, 150.0f), 0.0f))) {
+				m_puma_start = m_puma_end;
+				m_begin_changed = true;
+			}
+		}
+
+		if (m_end_changed || m_begin_changed) {
+			m_anim_time = 0.0f;
+			m_anim_active = false;
+		}
+
+		if (m_begin_changed) {
+			puma_config_t config;
+			puma_solution_meta_t meta;
+
+			m_solve_ik(config, meta, m_puma_start);
+
+			m_config1 = config;
+			m_config2 = config;
+			m_meta1 = meta;
+			m_meta2 = meta;
+
+			m_start_config = config;
+		}
+
+		if (m_end_changed) {
+			puma_config_t config;
+			puma_solution_meta_t meta;
+
+			m_solve_ik(config, meta, m_puma_end);
+
+			m_config1 = config;
+			m_config2 = config;
+			m_meta1 = meta;
+			m_meta2 = meta;
+
+			m_end_config = config;
 		}
 
 		ImGui::EndChild();
@@ -574,11 +670,36 @@ namespace mini {
 				gui::prefix_label("Loop Animation: ", 100.0f);
 				ImGui::Checkbox("##puma_loop", &m_loop_animation);
 
-				ImGui::Button("Start", ImVec2(width * 0.1f, 25.0f));
+				gui::prefix_label("Anim. Speed: ", 100.0f);
+				ImGui::SliderFloat("##puma_anim_speed", &m_anim_speed, 0.1f, 5.0f);
+
+				gui::prefix_label("Anim. Time: ", 100.0f);
+				if (ImGui::SliderFloat("##puma_anim_time", &m_anim_time, 0.0f, 1.0f)) {
+					m_anim_active = true;
+					m_anim_paused = true;
+				}
+
+				if (ImGui::Button("Play", ImVec2(width * 0.1f, 25.0f))) {
+					m_anim_active = true;
+					m_anim_paused = false;
+
+					if (!m_loop_animation && m_anim_time >= 1.0f) {
+						m_anim_time = 0.0f;
+					}
+				}
+
 				ImGui::SameLine();
-				ImGui::Button("Pause", ImVec2(width * 0.1f, 25.0f));
+
+				if (ImGui::Button("Pause", ImVec2(width * 0.1f, 25.0f))) {
+					m_anim_paused = true;
+				}
+
 				ImGui::SameLine();
-				ImGui::Button("Reset", ImVec2(width * 0.1f, 25.0f));
+
+				if (ImGui::Button("Reset", ImVec2(width * 0.1f, 25.0f))) {
+					m_anim_paused = false;
+					m_anim_time = 0.0f;
+				}
 			}
 		}
 

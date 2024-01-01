@@ -91,6 +91,9 @@ namespace mini {
 			puma_config_t m_start_config;
 			puma_config_t m_end_config;
 
+			// data for interpolation by configuration
+			puma_target_t m_current_target;
+
 			std::shared_ptr<grid_object> m_grid;
 
 			std::shared_ptr<triangle_mesh> m_effector_mesh;
@@ -114,6 +117,14 @@ namespace mini {
 			bool m_loop_animation;
 			bool m_flashlight;
 			bool m_debug_points;
+
+			bool m_begin_changed;
+			bool m_end_changed;
+
+			float m_anim_time;
+			float m_anim_speed;
+			bool m_anim_active;
+			bool m_anim_paused;
 
 		public:
 			puma_scene(application_base& app);
