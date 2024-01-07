@@ -87,11 +87,10 @@ namespace mini {
 		}
 
 		// no uninitialized solutions
-		puma_solution_meta_t meta;
-		m_solve_ik(m_start_config, meta, m_puma_start);
-		m_solve_ik(m_end_config, meta, m_puma_end);
-		m_solve_ik(m_config1, m_meta1, m_puma_start);
-		m_solve_ik(m_config2, m_meta2, m_puma_start);
+		m_solve_ik(m_start_config, m_start_meta, m_puma_start, ik_mode_t::default_solution);
+		m_solve_ik(m_end_config, m_end_meta, m_puma_end, ik_mode_t::default_solution);
+		m_solve_ik(m_config1, m_meta1, m_puma_start, ik_mode_t::default_solution);
+		m_solve_ik(m_config2, m_meta2, m_puma_start, ik_mode_t::default_solution);
 
 		auto camera = std::make_unique<default_camera>();
 		camera->video_mode_change(get_app().get_context().get_video_mode());
@@ -172,7 +171,9 @@ namespace mini {
 				// interpolate the end effector for animation 2
 				m_current_target.position = glm::mix(m_puma_start.position, m_puma_end.position, m_anim_time);
 				m_current_target.rotation = glm::slerp(m_puma_start.rotation, m_puma_end.rotation, m_anim_time);
-				m_solve_ik(m_config2, m_meta2, m_current_target);
+
+				// use closest distance mode to avoid snapping
+				m_solve_ik(m_config2, m_meta2, m_current_target, ik_mode_t::closest_distance);
 			}
 		} else {
 			m_anim_active = false;
@@ -199,7 +200,9 @@ namespace mini {
 		return atan2f(glm::dot(glm::cross(a, b), n), glm::dot(a, b));
 	}
 
-	void puma_scene::m_solve_ik(puma_config_t& config, puma_solution_meta_t& meta, const puma_target_t& target) const {
+	void puma_scene::m_solve_ik(puma_config_t& config, puma_solution_meta_t& meta, 
+		const puma_target_t& target, ik_mode_t mode) const {
+
 		auto p0 = glm::vec3{ 0.0f, 0.0f, 0.0f };
 		auto p1 = glm::vec3{ 0.0f, 0.0f, config.l1 };
 		auto p4 = target.position;
@@ -211,29 +214,68 @@ namespace mini {
 		auto p_ = p4 - p3;
 		auto n = glm::normalize(glm::cross(p1 - p3, p1 - p0));
 
-		auto num = config.l2 * config.l2;
-		auto den = 1.0f;
-		den += (n.x * n.x) / (n.y * n.y);
+		// this is the "regular" case, so not any edge case
+		const auto regular_case_p2 = [&](bool sign) -> glm::vec3 {
+			assert(p_.z != 0.0f);
 
-		float xv, yv, zv;
+			auto num = config.l2 * config.l2;
+			auto den = 1.0f;
+			den += (n.x * n.x) / (n.y * n.y);
 
-		if (p_.z != 0.0f) {
+			float xv, yv, zv;
+
 			auto m = (p_.x - p_.y * n.x / n.y) / p_.z;
 			den += m * m;
 
-			xv = glm::sqrt(num / den); // + or -
+			// + or -
+			if (sign) {
+				xv = glm::sqrt(num / den);
+			} else {
+				xv = -glm::sqrt(num / den);
+			}
+
 			zv = -m * xv;
 			yv = -n.x * xv / n.y;
-		} else {
-			// auto m = (p_.x - p_.y * n.x / n.y);
-			xv = 0.0f;
-			yv = 0.0f;
-			zv = config.l2;
-		}
+
+			return { xv, yv, zv };
+		};
+
+		// this lambda returns the "best" p2, given previous state of config
+		const auto get_best_p2 = [&]() -> glm::vec3 {
+			if (p_.z != 0.0f) {
+				auto sol1 = p3 + regular_case_p2(false);
+				auto sol2 = p3 + regular_case_p2(true);
+
+				switch (mode) {
+					case ik_mode_t::default_solution:
+						return sol2;
+
+					case ik_mode_t::alter_solution:
+						return sol1;
+
+					case ik_mode_t::closest_distance:
+						auto d1 = glm::distance2(meta.p2, sol1);
+						auto d2 = glm::distance2(meta.p2, sol2);
+
+						if (d1 <= d2) {
+							return sol1;
+						} else {
+							return sol2;
+						}
+				}
+			} else {
+				auto m = (p_.x - p_.y * n.x / n.y);
+				float xv = 0.0f;
+				float yv = 0.0f;
+				float zv = config.l2;
+
+				return glm::vec3{ p3.x + xv, p3.y + yv, p3.z + zv };
+			}
+		};
 
 		// v = P2 - P3
 		// P2 = v + P3
-		auto p2 = glm::vec3{ p3.x + xv, p3.y + yv, p3.z + zv };
+		auto p2 = get_best_p2();
 		auto v01 = p1;
 		auto v12 = p2 - p1;
 		auto v23 = p3 - p2;
@@ -616,32 +658,29 @@ namespace mini {
 			m_anim_active = false;
 		}
 
-		if (m_begin_changed) {
-			puma_config_t config;
-			puma_solution_meta_t meta;
+		if (m_begin_changed || m_end_changed) {
+			puma_config_t config = m_start_config;
+			puma_solution_meta_t meta = m_start_meta;
 
-			m_solve_ik(config, meta, m_puma_start);
-
-			m_config1 = config;
-			m_config2 = config;
-			m_meta1 = meta;
-			m_meta2 = meta;
+			m_solve_ik(config, meta, m_puma_start, ik_mode_t::default_solution);
 
 			m_start_config = config;
+			m_start_meta = meta;
+
+			m_solve_ik(config, meta, m_puma_end, ik_mode_t::closest_distance);
+
+			m_end_config = config;
+			m_end_meta = meta;
+		}
+
+		if (m_begin_changed) {
+			m_config1 = m_config2 = m_start_config;
+			m_meta1 = m_meta2 = m_start_meta;
 		}
 
 		if (m_end_changed) {
-			puma_config_t config;
-			puma_solution_meta_t meta;
-
-			m_solve_ik(config, meta, m_puma_end);
-
-			m_config1 = config;
-			m_config2 = config;
-			m_meta1 = meta;
-			m_meta2 = meta;
-
-			m_end_config = config;
+			m_config1 = m_config2 = m_end_config;
+			m_meta1 = m_meta2 = m_end_meta;
 		}
 
 		ImGui::EndChild();
@@ -689,16 +728,28 @@ namespace mini {
 
 				gui::prefix_label("Anim. Time: ", 100.0f);
 				if (ImGui::SliderFloat("##puma_anim_time", &m_anim_time, 0.0f, 1.0f)) {
+					if (!m_anim_active) {
+						m_config1 = m_config2 = m_start_config;
+						m_meta1 = m_meta2 = m_start_meta;
+					}
+
 					m_anim_active = true;
 					m_anim_paused = true;
 				}
 
 				if (ImGui::Button("Play", ImVec2(width * 0.1f, 25.0f))) {
+					if (!m_anim_active) {
+						m_config1 = m_config2 = m_start_config;
+						m_meta1 = m_meta2 = m_start_meta;
+					}
+
 					m_anim_active = true;
 					m_anim_paused = false;
 
 					if (!m_loop_animation && m_anim_time >= 1.0f) {
 						m_anim_time = 0.0f;
+						m_config1 = m_config2 = m_start_config;
+						m_meta1 = m_meta2 = m_start_meta;
 					}
 				}
 

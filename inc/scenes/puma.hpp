@@ -21,6 +21,12 @@ namespace mini {
 				 0.0f,  0.0f, 0.0f, 1.0f
 			};
 
+			enum class ik_mode_t {
+				default_solution,
+				alter_solution,
+				closest_distance
+			};
+
 			struct puma_config_t {
 				float l1, l2, l3;
 				float q1, q2, q3, q4, q5, q6;
@@ -91,6 +97,9 @@ namespace mini {
 			puma_config_t m_start_config;
 			puma_config_t m_end_config;
 
+			puma_solution_meta_t m_start_meta;
+			puma_solution_meta_t m_end_meta;
+
 			// data for interpolation by configuration
 			puma_target_t m_current_target;
 
@@ -143,7 +152,8 @@ namespace mini {
 			std::shared_ptr<triangle_mesh> m_make_effector_mesh();
 			std::shared_ptr<segments_array> m_make_debug_mesh(std::shared_ptr<shader_program> line_shader);
 
-			void m_solve_ik(puma_config_t& config, puma_solution_meta_t& meta, const puma_target_t& target) const;
+			void m_solve_ik(puma_config_t& config, puma_solution_meta_t& meta, 
+				const puma_target_t& target, ik_mode_t mode) const;
 		
 			void m_draw_puma(app_context& context, const puma_config_t& config, glm::vec3& effector_pos) const;
 			void m_draw_frame(app_context& context, const glm::mat4x4& transform) const;
