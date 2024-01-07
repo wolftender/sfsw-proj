@@ -212,7 +212,48 @@ namespace mini {
 		auto p3 = target.position - xdir * config.l3;
 
 		auto p_ = p4 - p3;
-		auto n = glm::normalize(glm::cross(p1 - p3, p1 - p0));
+		auto n = glm::cross(p1 - p3, p1 - p0);
+
+		bool is_colinear = (glm::length2(n) < 1e-7f);
+		if (!is_colinear) {
+			n = glm::normalize(n);
+		} else {
+			// solve the colinear case
+			n = glm::normalize(p_);
+
+			auto lp2 = meta.p2 - p3;
+			auto q = lp2 - n * glm::dot(n, lp2); // project onto plane
+
+			// previous point is at the centre of the circle
+			// this probably should never happen
+			if (glm::length2(q) < 1e-7f) [[unlikely]] { 
+				q = glm::normalize(glm::cross(n, glm::vec3{1.0f, 0.0f, 0.0f}));
+			}
+
+			auto r = config.l2 * glm::normalize(q);
+			auto p2 = r + p3;
+
+			meta.p1 = p1;
+			meta.p2 = p2;
+			meta.p3 = p3;
+			meta.p4 = p4;
+
+			auto v01 = p1;
+			auto v12 = p2 - p1;
+			auto v23 = p3 - p2;
+
+			auto world_up = glm::vec3{0.0f, 0.0f, 1.0f};
+			float dotx = glm::abs(glm::dot(xdir, world_up));
+
+			assert(false && "todo");
+			if (dotx > 0.9f) { 
+				// special case 1: effector is facing directly up/down
+			} else { 
+				// special case 2: effector is in the plane xy
+			}
+
+			return;
+		}
 
 		// this is the "regular" case, so not any edge case
 		const auto regular_case_p2 = [&](bool sign) -> glm::vec3 {
