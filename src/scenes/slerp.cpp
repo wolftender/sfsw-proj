@@ -176,7 +176,7 @@ namespace mini {
 	}
 
 	slerp_scene::simulation_state_t::simulation_state_t(simulation_settings_t settings, bool animate) :
-		settings(settings), animate(animate), elapsed(0.0f) { 
+		settings(settings), elapsed(0.0f), animate(animate) { 
 		
 		this->settings.start_rotation_e[0] = deg_to_rad(this->settings.start_rotation_e[0]);
 		this->settings.start_rotation_e[1] = deg_to_rad(this->settings.start_rotation_e[1]);
@@ -233,11 +233,11 @@ namespace mini {
 
 	slerp_scene::slerp_scene(application_base& app) : 
 		scene_base(app),
-		m_state(m_settings, true),
 		m_context1(app.get_context()),
 		m_context2(video_mode_t(600, 400)),
 		m_viewport1(app, m_context1, "Quaternion"),
-		m_viewport2(app, m_context2, "Euler Angles") {
+		m_viewport2(app, m_context2, "Euler Angles"),
+		m_state(m_settings, true) {
 
 		m_context1.set_clear_color({ 0.75f, 0.75f, 0.9f });
 		m_context2.set_clear_color({ 0.75f, 0.75f, 0.9f });

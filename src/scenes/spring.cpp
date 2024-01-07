@@ -19,13 +19,13 @@ namespace mini {
 		m_k0(0.7f),
 		m_c0(10.0f),
 		m_m0(1.0f),
+		m_h0(1.0f / 60.0f),
 		m_x0(3.0f), m_dx0(0.0f), m_ddx0(0.0f),
 		m_x(0.0f), m_dx(0.0f), m_ddx(0.0f),
-		m_last_vp_width(0),
-		m_last_vp_height(0),
 		m_distance(6.0f),
 		m_spring_length(3.0f),
-		m_h0(1.0f / 60.0f),
+		m_last_vp_width(0),
+		m_last_vp_height(0),
 		m_paused(false),
 		m_w_expression("0"),
 		m_h_expression("sin(t)+cos(t)") {
@@ -148,7 +148,7 @@ namespace mini {
 		std::ofstream stream(file_name);
 
 		if (stream) {
-			for (auto i = 0; i < m_num_data_points; ++i) {
+			for (std::size_t i = 0; i < m_num_data_points; ++i) {
 				stream 
 				<< m_t_data[i] << " "
 				<< m_f_data[i] << " "
@@ -213,7 +213,6 @@ namespace mini {
 		m_friction_coefficient = m_k0;
 		m_step = m_h0;
 
-		const float m = m_mass;
 		const float mi = m_mass_inv;
 		const float c = m_spring_coefficient;
 		const float k = m_friction_coefficient;
@@ -244,7 +243,6 @@ namespace mini {
 		
 		while (m_step_timer > m_step) {
 			const float step = m_step;
-			const float m = m_mass;
 			const float mi = m_mass_inv;
 			const float c = m_spring_coefficient;
 			const float k = m_friction_coefficient;
@@ -356,7 +354,7 @@ namespace mini {
 		auto height = max.y - min.y;
 
 		constexpr float min_range_x = 20.0f;
-		constexpr float min_range_y = 5.0f;
+		//constexpr float min_range_y = 5.0f;
 
 		// render plots
 		if (ImPlot::BeginPlot("f(t)", ImVec2(width * 0.325f, height - 15.0f), ImPlotFlags_NoBoxSelect | ImPlotFlags_NoInputs)) {
@@ -420,7 +418,7 @@ namespace mini {
 		auto height = max.y - min.y;
 
 		constexpr float min_range_x = 20.0f;
-		constexpr float min_range_y = 5.0f;
+		//constexpr float min_range_y = 5.0f;
 
 		// render plots
 		if (ImPlot::BeginPlot("x(t)", ImVec2(width * 0.325f, height - 15.0f), ImPlotFlags_NoBoxSelect | ImPlotFlags_NoInputs)) {
@@ -483,8 +481,8 @@ namespace mini {
 		auto width = max.x - min.x;
 		auto height = max.y - min.y;
 
-		constexpr float min_range_x = 20.0f;
-		constexpr float min_range_y = 20.0f;
+		//constexpr float min_range_x = 20.0f;
+		//constexpr float min_range_y = 20.0f;
 
 		// render plots
 		if (ImPlot::BeginPlot("x(v)", ImVec2(width, height), ImPlotFlags_NoBoxSelect)) {
@@ -570,7 +568,7 @@ namespace mini {
 
 		auto min = ImGui::GetWindowContentRegionMin();
 		auto max = ImGui::GetWindowContentRegionMax();
-		auto window_pos = ImGui::GetWindowPos();
+		//auto window_pos = ImGui::GetWindowPos();
 
 		int width = static_cast<int>(max.x - min.x);
 		int height = static_cast<int>(max.y - min.y);

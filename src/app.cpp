@@ -14,6 +14,11 @@
 #include "scenes/puma.hpp"
 	
 namespace mini {
+	// ignore pedantic warnings
+	inline constexpr int operator| (ImGuiDockNodeFlags_ f1, ImGuiDockNodeFlagsPrivate_ f2) {
+		return static_cast<int>(f1) | static_cast<int>(f2);
+	};
+
 	application::application() : 
 		application_base(1200, 800, "physics application"),
 		m_context(video_mode_t(1200, 800)) {
@@ -231,8 +236,8 @@ namespace mini {
 		ImGuiID dockspace_id = ImGui::GetID("g_dockspace");
 		ImGui::DockSpace(dockspace_id, ImVec2(0, 0), ImGuiDockNodeFlags_PassthruCentralNode);
 
-		auto min = ImGui::GetWindowContentRegionMin();
-		auto max = ImGui::GetWindowContentRegionMax();
+		//auto min = ImGui::GetWindowContentRegionMin();
+		//auto max = ImGui::GetWindowContentRegionMax();
 
 		if (!m_layout_ready) {
 			m_layout_ready = true;

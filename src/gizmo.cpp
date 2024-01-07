@@ -105,11 +105,6 @@ namespace mini {
 		const auto& proj_matrix = context.get_projection_matrix();
 
 		auto local = glm::mat4x4(1.0f);
-
-		glm::vec3 center = world_matrix * glm::vec4{ 0.0f, 0.0f, 0.0f, 1.0f };
-		float dist = glm::distance(context.get_camera().get_position(), center);
-		float world_size = 2.0f * glm::tan(glm::pi<float>() / 3.0f) * dist * 0.018f;
-
 		auto offset = glm::vec3{ 0.0f, 1.0f, 0.0f };
 
 		glm::mat4x4 up = glm::translate(glm::rotate(local, glm::pi<float>(), glm::vec3{ 1.0f, 0.0f, 0.0f }), offset);
@@ -148,7 +143,7 @@ namespace mini {
 
 	void gizmo::m_gen_arrow_mesh(gizmo_mesh_t& mesh) {
 		constexpr GLuint a_position = 0;
-		constexpr GLuint a_color = 1;
+		//constexpr GLuint a_color = 1;
 
 		std::vector<float> positions;
 		std::vector<GLuint> indices;

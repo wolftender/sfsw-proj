@@ -7,32 +7,32 @@ namespace mini {
 	viewport_window::viewport_window(application_base& app, const std::string_view& name) : 
 		m_app(app),
 		m_context(app.get_context()),
-		m_name(name),
 		m_viewport_focus(false),
 		m_mouse_in_viewport(false),
 		m_camera_moved(false),
-		m_last_vp_width(0),
-		m_last_vp_height(0),
-		m_vp_mouse_offset{0, 0},
 		m_distance(10.0f),
 		m_cam_pitch(-0.7f),
 		m_cam_yaw(0.0f),
+		m_last_vp_width(0),
+		m_last_vp_height(0),
+		m_vp_mouse_offset{0, 0},
+		m_name(name),
 		m_camera_target{ 0.0f, 0.0f, 0.0f } {
 	}
 
 	viewport_window::viewport_window(application_base& app, app_context& context, const std::string_view& name) :
 		m_app(app),
 		m_context(context),
-		m_name(name),
 		m_viewport_focus(false),
 		m_mouse_in_viewport(false),
 		m_camera_moved(false),
-		m_last_vp_width(0),
-		m_last_vp_height(0),
-		m_vp_mouse_offset{ 0, 0 },
 		m_distance(10.0f),
 		m_cam_pitch(-0.7f),
 		m_cam_yaw(0.0f),
+		m_last_vp_width(0),
+		m_last_vp_height(0),
+		m_vp_mouse_offset{0, 0},
+		m_name(name),
 		m_camera_target{ 0.0f, 0.0f, 0.0f } {
 	}
 

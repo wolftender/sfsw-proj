@@ -39,11 +39,12 @@ namespace mini {
 	top_scene::simulation_state_t::simulation_state_t(
 		const simulation_parameters_t& parameters, 
 		const world_parameters_t* world_params) :
-		Q(1.0f, 0.0f, 0.0f, 0.0f),
-		W(1.0f, 1.0f, 1.0f),
-		time(0.0f), step_timer(0.0f),
 		world_params(world_params),
-		parameters(parameters) {
+		parameters(parameters),
+		W(1.0f, 1.0f, 1.0f),
+		Q(1.0f, 0.0f, 0.0f, 0.0f),
+		time(0.0f), 
+		step_timer(0.0f) {
 
 		// initial angular speed
 		W = W * parameters.angular_velocity;
@@ -135,16 +136,16 @@ namespace mini {
 	}
 
 	top_scene::top_scene(application_base& app) : scene_base(app),
-		m_start_params(),
-		m_world_params(),
-		m_state(m_start_params, &m_world_params),
-		m_viewport(app, "Spinning Top"),
 		m_display_cube(true),
-		m_display_plane(true),
 		m_display_diagonal(true),
 		m_display_grid(true),
+		m_display_plane(true),
 		m_display_path(true),
-		m_max_data_points(MAX_DATA_POINTS) {
+		m_world_params(),
+		m_start_params(),
+		m_state(m_start_params, &m_world_params),
+		m_max_data_points(MAX_DATA_POINTS),
+		m_viewport(app, "Spinning Top") {
 
 		m_clear_data_points();
 
@@ -290,7 +291,7 @@ namespace mini {
 		std::ofstream stream(file_name);
 
 		if (stream) {
-			for (auto i = 0; i < m_path_points.size(); ++i) {
+			for (std::size_t i = 0; i < m_path_points.size(); ++i) {
 				stream
 					<< m_time_points[i] << " "
 					<< m_path_points[i].x << " "

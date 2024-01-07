@@ -66,9 +66,6 @@ namespace mini {
 		const auto& view_matrix = context.get_view_matrix();
 		const auto& proj_matrix = context.get_projection_matrix();
 
-		float screen_width = static_cast<float> (context.get_video_mode().get_buffer_width());
-		float screen_height = static_cast<float> (context.get_video_mode().get_buffer_height());
-
 		glm::vec4 center = { 0.0f, 0.0f, 0.0f, 1.0f };
 		center = world_matrix * center;
 

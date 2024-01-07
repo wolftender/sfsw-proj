@@ -42,7 +42,7 @@ namespace mini {
 				quaternion end_rotation_q;
 
 				bool start_quat_mode, end_quat_mode;
-				bool slerp, loop;
+				bool loop, slerp;
 				int num_frames;
 
 				simulation_settings_t() :

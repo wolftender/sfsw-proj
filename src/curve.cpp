@@ -126,7 +126,7 @@ namespace mini {
 
     void curve::m_rebuild_buffers() {
         constexpr GLuint a_position = 0;
-		constexpr GLuint a_color = 1;
+		//constexpr GLuint a_color = 1;
 
         if (m_ready) {
             m_free_buffers();
@@ -141,7 +141,7 @@ namespace mini {
         m_positions.clear();
         m_positions.resize(m_points.size() * 3);
 
-        for (int i = 0; i < m_points.size(); ++i) {
+        for (std::size_t i = 0; i < m_points.size(); ++i) {
             m_positions[3 * i + 0] = m_points[i].x;
             m_positions[3 * i + 1] = m_points[i].y;
             m_positions[3 * i + 2] = m_points[i].z;

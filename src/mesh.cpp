@@ -377,6 +377,8 @@ namespace mini {
 		std::vector<float> positions, normals, uv;
 		std::vector<uint32_t> indices;
 
+		assert(latitudes > 0 && longitudes > 0);
+
 		float vx, vy, vz, nx, ny, nz, tu, tv;
 		float radiusInv = 1 / radius;
 
@@ -388,7 +390,7 @@ namespace mini {
 		float latStep = 1.0f / latitudes;
 		float longStep = 1.0f / longitudes;
 
-		for (uint32_t i = 0; i <= latitudes; ++i) {
+		for (int i = 0; i <= latitudes; ++i) {
 			latHeight = i * dLat;
 
 			if (i <= 1) {
@@ -400,7 +402,7 @@ namespace mini {
 			float xy = (i == 0 || i == latitudes) ? 0 : radius;
 			float z = latHeight;
 
-			for (uint32_t j = 0; j <= longitudes; ++j) {
+			for (int j = 0; j <= longitudes; ++j) {
 				longAng = j * dLong;
 				vx = xy * glm::cos(longAng);
 				vy = xy * glm::sin(longAng);
@@ -430,11 +432,11 @@ namespace mini {
 		}
 
 		uint32_t k1, k2;
-		for (uint32_t i = 0; i < latitudes; ++i) {
+		for (int i = 0; i < latitudes; ++i) {
 			k1 = i * (longitudes + 1);
 			k2 = k1 + longitudes + 1;
 
-			for (uint32_t j = 0; j < longitudes; ++j, ++k1, ++k2) {
+			for (int j = 0; j < longitudes; ++j, ++k1, ++k2) {
 				if (i != 0) {
 					indices.insert(indices.end(), { k1 + 1, k2, k1 });
 				}

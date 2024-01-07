@@ -20,11 +20,11 @@ namespace mini {
 	};
 
 	gel_scene::point_mass_t::point_mass_t(const glm::vec3& x) :
+		x0{ 0.0f, 0.0f, 0.0f }, 
+		dx0{ 0.0f, 0.0f, 0.0f },
 		x(x), 
 		dx{0.0f, 0.0f, 0.0f}, 
-		ddx{0.0f, 0.0f, 0.0f}, 
-		x0{ 0.0f, 0.0f, 0.0f }, 
-		dx0{ 0.0f, 0.0f, 0.0f } {}
+		ddx{0.0f, 0.0f, 0.0f} {}
 
 	////// EULER METHOD //////
 

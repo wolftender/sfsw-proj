@@ -146,7 +146,7 @@ namespace mini {
 		auto old_camera = std::move (m_camera);
 		m_camera = std::move (camera);
 
-		return std::move (old_camera);
+		return old_camera;
 	}
 
 	const glm::mat4x4 & app_context::get_view_matrix () const {

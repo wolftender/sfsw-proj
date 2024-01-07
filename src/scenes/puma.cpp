@@ -24,9 +24,11 @@ namespace mini {
 		scene_base(app), 
 		m_context1(app.get_context()),
 		m_context2(video_mode_t(600, 400)), 
-		m_distance(10.0f),
+		m_viewport1(app, m_context1, "Config Interp."),
+		m_viewport2(app, m_context2, "Effector Interp."),
 		m_effector1{ 0.0f, 0.0f, 0.0f },
 		m_effector2{ 0.0f, 0.0f, 0.0f },
+		m_distance(10.0f),
 		m_manual_control(false),
 		m_follow_effector(false),
 		m_loop_animation(false),
@@ -37,9 +39,7 @@ namespace mini {
 		m_anim_time(0.0f),
 		m_anim_speed(0.5f),
 		m_anim_active(false),
-		m_anim_paused(false),
-		m_viewport1(app, m_context1, "Config Interp."),
-		m_viewport2(app, m_context2, "Effector Interp.") {
+		m_anim_paused(false) {
 
 		m_context1.set_clear_color({ 0.75f, 0.75f, 0.9f });
 		m_context2.set_clear_color({ 0.75f, 0.75f, 0.9f });
@@ -225,7 +225,7 @@ namespace mini {
 			zv = -m * xv;
 			yv = -n.x * xv / n.y;
 		} else {
-			auto m = (p_.x - p_.y * n.x / n.y);
+			// auto m = (p_.x - p_.y * n.x / n.y);
 			xv = 0.0f;
 			yv = 0.0f;
 			zv = config.l2;
@@ -237,7 +237,7 @@ namespace mini {
 		auto v01 = p1;
 		auto v12 = p2 - p1;
 		auto v23 = p3 - p2;
-		auto v34 = p4 - p3;
+		// auto v34 = p4 - p3;
 
 		config.q1 = atan2f(p3.y, p3.x);
 		config.q2 = HPI - oriented_angle(glm::normalize(v01), glm::normalize(v12), n);

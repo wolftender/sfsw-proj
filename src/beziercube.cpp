@@ -72,9 +72,9 @@ namespace mini {
 		build_indices(m_indices);
 
 		constexpr GLuint a_position = 0;
-		constexpr GLuint a_normal = 1;
+		//constexpr GLuint a_normal = 1;
 		constexpr GLuint a_uv = 2;
-		constexpr GLuint a_color = 3;
+		//constexpr GLuint a_color = 3;
 
 		glGenVertexArrays(1, &m_vao);
 		glGenBuffers(1, &m_pos_buffer);
@@ -141,9 +141,6 @@ namespace mini {
 
 	void bezier_cube::render(app_context& context, const glm::mat4x4& world_matrix) const {
 		glBindVertexArray(m_vao);
-
-		const auto& view_matrix = context.get_view_matrix();
-		const auto& proj_matrix = context.get_projection_matrix();
 
 		if (m_wireframe_mode) {
 			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);

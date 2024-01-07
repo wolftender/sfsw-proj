@@ -99,7 +99,7 @@ namespace mini {
 		const robot_configuration_t& end, 
 		std::vector<robot_configuration_t>& path) {
 		
-		if (dist.size() != res_x * res_y) {
+		if (dist.size() != static_cast<std::size_t>(res_x * res_y)) {
 			dist.resize(res_x * res_y);
 		}
 
@@ -145,7 +145,7 @@ namespace mini {
 		s.push_back(start_cell);
 
 		int idx_start = start_cell.second * res_x + start_cell.first;
-		int idx_end = end_cell.second * res_x + end_cell.first;
+		//int idx_end = end_cell.second * res_x + end_cell.first;
 
 		dist[idx_start] = 0;
 
@@ -250,26 +250,28 @@ namespace mini {
 		m_conf(360, 360),
 		m_arm1_len(5.0f),
 		m_arm2_len(6.0f),
-		m_last_vp_height(0),
-		m_last_vp_width(0),
-		m_mouse_mode(mouse_mode_t::start_config),
-		m_vp_mouse_offset{0, 0},
 		m_mouse_tool_id(0),
-		m_obstacle_start{0.0f, 0.0f},
-		m_end_point{11.0f, 0.0f},
-		m_start_point{0.0f, 11.0f},
-		m_selected_obstacle(-1),
+		m_alt_solution_start(false),
+		m_alt_solution_end(false),
+		m_last_vp_width(0),
+		m_last_vp_height(0),
+		m_mouse_in_viewport(false),
+		m_viewport_focus(false),
+		m_is_start_ok(false),
+		m_is_end_ok(false),
 		m_is_start_collision(false),
 		m_is_end_collision(false),
 		m_show_path_error(false),
-		m_is_start_ok(false),
-		m_is_end_ok(false),
 		m_loop_animation(false),
-		m_alt_solution_start(false),
-		m_alt_solution_end(false),
-		m_viewport_focus(false),
-		m_mouse_in_viewport(false),
-		m_animation_playing(false) {
+		m_vp_mouse_offset{0, 0},
+		m_start_point{0.0f, 11.0f},
+		m_end_point{11.0f, 0.0f},
+		m_mouse_mode(mouse_mode_t::start_config),
+		m_obstacle_start{0.0f, 0.0f},
+		m_is_adding_obstacle(false),
+		m_selected_obstacle(-1),
+		m_animation_playing(false),
+		m_animation_timer(0.0f) {
 		
 		app.get_context().set_clear_color({ 0.95f, 0.95f, 0.95f });
 
@@ -610,9 +612,8 @@ namespace mini {
 					clipper.Begin(m_obstacles.size());
 
 					while (clipper.Step()) {
-						for (int i = clipper.DisplayStart; i < clipper.DisplayEnd && i < m_obstacles.size(); ++i) {
-							auto& obstacles = m_obstacles[i];
-
+						int num_obstacles = static_cast<int>(m_obstacles.size());
+						for (int i = clipper.DisplayStart; i < clipper.DisplayEnd && i < num_obstacles; ++i) {
 							std::string full_name;
 							bool selected = (i == m_selected_obstacle);
 
@@ -732,10 +733,9 @@ namespace mini {
 
 		auto min = ImGui::GetWindowContentRegionMin();
 		auto max = ImGui::GetWindowContentRegionMax();
-		auto window_pos = ImGui::GetWindowPos();
 
 		int width = static_cast<int> (max.x - min.x);
-		int height = static_cast<int> (max.y - min.y);
+		//int height = static_cast<int> (max.y - min.y);
 
 		ImGui::ImageButton(reinterpret_cast<ImTextureID> (
 			m_conf.texture->get_handle()), ImVec2(width, width), ImVec2(0, 0), ImVec2(1, 1), 0);
