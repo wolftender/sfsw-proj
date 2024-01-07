@@ -240,38 +240,46 @@ namespace mini {
 			return { xv, yv, zv };
 		};
 
+		const auto select_from_two = [&](const glm::vec3 & sol1, const glm::vec3 & sol2) -> glm::vec3 {
+			auto d1 = glm::distance2(meta.p2, sol1);
+			auto d2 = glm::distance2(meta.p2, sol2);
+
+			switch (mode) {
+				case ik_mode_t::default_solution:
+					return sol1;
+
+				case ik_mode_t::alter_solution:
+					return sol2;
+
+				case ik_mode_t::closest_distance:
+					if (d1 <= d2) {
+						return sol1;
+					} else {
+						return sol2;
+					}
+
+				default:
+					return sol1;
+			}
+		};
+
 		// this lambda returns the "best" p2, given previous state of config
 		const auto get_best_p2 = [&]() -> glm::vec3 {
 			if (p_.z != 0.0f) {
-				auto sol1 = p3 + regular_case_p2(false);
-				auto sol2 = p3 + regular_case_p2(true);
+				auto sol1 = p3 + regular_case_p2(true);
+				auto sol2 = p3 + regular_case_p2(false);
 
-				switch (mode) {
-					case ik_mode_t::default_solution:
-						return sol2;
-
-					case ik_mode_t::alter_solution:
-						return sol1;
-
-					case ik_mode_t::closest_distance:
-						auto d1 = glm::distance2(meta.p2, sol1);
-						auto d2 = glm::distance2(meta.p2, sol2);
-
-						if (d1 <= d2) {
-							return sol1;
-						} else {
-							return sol2;
-						}
-				}
-
-				return sol2;
+				return select_from_two(sol1, sol2);
 			} else {
 				auto m = (p_.x - p_.y * n.x / n.y);
 				float xv = 0.0f;
 				float yv = 0.0f;
 				float zv = config.l2;
 
-				return glm::vec3{ p3.x + xv, p3.y + yv, p3.z + zv };
+				auto sol1 = glm::vec3{ p3.x + xv, p3.y + yv, p3.z + zv };
+				auto sol2 = glm::vec3{ p3.x + xv, p3.y + yv, p3.z - zv };
+
+				return select_from_two(sol1, sol2);
 			}
 		};
 
@@ -766,6 +774,8 @@ namespace mini {
 				if (ImGui::Button("Reset", ImVec2(width * 0.1f, 25.0f))) {
 					m_anim_paused = false;
 					m_anim_time = 0.0f;
+					m_config1 = m_config2 = m_start_config;
+					m_meta1 = m_meta2 = m_start_meta;
 				}
 			}
 		}
