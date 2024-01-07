@@ -245,11 +245,33 @@ namespace mini {
 			auto world_up = glm::vec3{0.0f, 0.0f, 1.0f};
 			float dotx = glm::abs(glm::dot(xdir, world_up));
 
-			assert(false && "todo");
 			if (dotx > 0.9f) { 
 				// special case 1: effector is facing directly up/down
+				float l13 = glm::distance(p1, p3);
+				float a = atan2f(config.l2, l13);
+
+				if (p3.z >= p1.z) {
+					config.q1 = atan2f(-p2.y, -p2.x);
+					config.q2 = a + HPI;
+					config.q3 = glm::distance(p1, p2);
+					config.q4 = a;
+				} else {
+					config.q1 = atan2f(-p2.y, -p2.x);
+					config.q2 = -HPI - a;
+					config.q3 = glm::distance(p1, p2);
+					config.q4 = PI - a;
+				}
+
+				if (p4.z > p3.z) {
+					config.q5 = 0.0f;
+				} else {
+					config.q5 = PI;
+				}
+
+				// TODO: q6
 			} else { 
 				// special case 2: effector is in the plane xy
+				// TODO
 			}
 
 			return;
