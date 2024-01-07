@@ -263,6 +263,8 @@ namespace mini {
 							return sol2;
 						}
 				}
+
+				return sol2;
 			} else {
 				auto m = (p_.x - p_.y * n.x / n.y);
 				float xv = 0.0f;
