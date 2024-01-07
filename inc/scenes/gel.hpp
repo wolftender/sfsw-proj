@@ -90,6 +90,7 @@ namespace mini {
 					solver_type(solver_type_t::euler) { }
 			};
 
+        public:
 			struct point_mass_t {
 				glm::vec3 x0;
 				glm::vec3 dx0;
@@ -100,7 +101,8 @@ namespace mini {
 
 				point_mass_t(const glm::vec3& x);
 			};
-
+        
+        private:
 			struct spring_t {
 				float length;
 				bool enabled;

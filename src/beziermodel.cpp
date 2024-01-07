@@ -1,3 +1,4 @@
+#include <format>
 #include "beziermodel.hpp"
 
 namespace mini {
