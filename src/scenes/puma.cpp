@@ -261,14 +261,17 @@ namespace mini {
 					config.q3 = glm::distance(p1, p2);
 					config.q4 = PI - a;
 				}
-
+				
+				auto b = oriented_angle(ydir, glm::normalize(v23), world_up);
 				if (p4.z > p3.z) {
+				        // xdir == world_up
 					config.q5 = 0.0f;
+					config.q6 = -HPI - b;
 				} else {
+				        // xdir == -world_up
 					config.q5 = PI;
+					config.q6 = b - HPI;
 				}
-
-				// TODO: q6
 			} else { 
 				// special case 2: effector is in the plane xy
 				// TODO
