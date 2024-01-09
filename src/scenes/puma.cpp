@@ -274,7 +274,17 @@ namespace mini {
 				}
 			} else { 
 				// special case 2: effector is in the plane xy
-				// TODO
+				auto n = glm::normalize(p4 - p3);
+				float a = oriented_angle(glm::normalize(v01), glm::normalize(v12), n);
+				float b = oriented_angle(glm::normalize(v12), glm::normalize(v23), n);
+				float c = oriented_angle(glm::normalize(p2 - p3), ydir, n);
+				
+				config.q1 = atan2f(-p4.y, -p4.x) + HPI;
+				config.q2 = HPI - a;
+				config.q3 = glm::distance(p1, p2);
+				config.q4 = b - HPI;
+				config.q5 = HPI;
+				config.q6 = c + HPI;
 			}
 
 			return;
