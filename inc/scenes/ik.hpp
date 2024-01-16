@@ -84,7 +84,6 @@ namespace mini {
 			bool m_loop_animation;
 
 			offset_t m_vp_mouse_offset;
-
 			glm::vec2 m_start_point, m_end_point;
 
 			// objects

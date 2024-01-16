@@ -12,6 +12,7 @@
 #include "scenes/gel.hpp"
 #include "scenes/ik.hpp"
 #include "scenes/puma.hpp"
+#include "scenes/flywheel.hpp"
 	
 namespace mini {
 	// ignore pedantic warnings
@@ -142,6 +143,10 @@ namespace mini {
 				case GLFW_KEY_F6:
 					m_load_scene_puma();
 					return;
+					
+				case GLFW_KEY_F7:
+					m_load_scene_flywheel();
+					return;
 
 				default: 
 					break;
@@ -202,6 +207,10 @@ namespace mini {
 
 				if (ImGui::MenuItem("PUMA Demo", "Ctrl + Shift + F6", nullptr, true)) {
 					m_load_scene_puma();
+				}
+				
+				if (ImGui::MenuItem("Flywheel Demo", "Ctrl + Shift + F7", nullptr, true)) {
+					m_load_scene_flywheel();
 				}
 
 				ImGui::EndMenu();
@@ -286,6 +295,11 @@ namespace mini {
 
 	void application::m_load_scene_puma() {
 		m_scene = std::make_unique<puma_scene>(*this);
+		m_layout_ready = false;
+	}
+	
+	void application::m_load_scene_flywheel() {
+		m_scene = std::make_unique<flywheel_scene>(*this);
 		m_layout_ready = false;
 	}
 }

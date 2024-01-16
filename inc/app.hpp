@@ -43,5 +43,6 @@ namespace mini {
 			void m_load_scene_soft();
 			void m_load_scene_ik();
 			void m_load_scene_puma();
+			void m_load_scene_flywheel();
 	};
 }
