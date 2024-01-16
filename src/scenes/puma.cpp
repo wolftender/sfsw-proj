@@ -644,13 +644,13 @@ namespace mini {
 			}
 		} else {
 			gui::prefix_label("x: ", 250.0f);
-			changed = ImGui::DragFloat(id_quat_x.c_str(), &e.x, 1.0f, -90.0f, 90.0f) || changed;
+			changed = ImGui::DragFloat(id_quat_x.c_str(), &e.x, 1.0f, -180.0f, 180.0f) || changed;
 
 			gui::prefix_label("y: ", 250.0f);
-			changed = ImGui::DragFloat(id_quat_y.c_str(), &e.y, 1.0f, -90.0f, 90.0f) || changed;
+			changed = ImGui::DragFloat(id_quat_y.c_str(), &e.y, 1.0f, -180.0f, 180.0f) || changed;
 
 			gui::prefix_label("z: ", 250.0f);
-			changed = ImGui::DragFloat(id_quat_z.c_str(), &e.z, 1.0f, -90.0f, 90.0f) || changed;
+			changed = ImGui::DragFloat(id_quat_z.c_str(), &e.z, 1.0f, -180.0f, 180.0f) || changed;
 
 			// convert euler to quat
 			if (changed) {
