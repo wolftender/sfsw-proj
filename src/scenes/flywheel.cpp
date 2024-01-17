@@ -3,7 +3,28 @@
 
 namespace mini {
 	void flywheel_scene::simulation_state_t::integrate(float delta_time) {
-		time = time + delta_time;
+		time = time + delta_time * flywheel_speed;
+
+		constexpr float pi = glm::pi<float>();
+		constexpr float dpi = 2.0f * pi;
+		if (time > dpi) {
+			time -= dpi;
+		}
+		
+		const float R = wheel_radius;
+		origin_pos = glm::vec2 {
+			R * glm::cos(time) - R,
+			R * glm::sin(time)
+		};
+
+		float ysq = origin_pos.y * origin_pos.y;
+		float dsq = stick_length * stick_length;
+		float xsq = dsq - ysq;
+
+		mass_pos = glm::vec2 {
+			origin_pos.x + glm::sqrt(xsq),
+			0.0f
+		};
 	}
 
 	flywheel_scene::flywheel_scene(application_base & app) : 
@@ -26,13 +47,10 @@ namespace mini {
 		if (line_shader) {
 			m_wheel_curve = m_make_wheel_curve(line_shader);
 			m_square_curve = m_make_square_curve(line_shader);
-			
-			std::vector<glm::vec3> curve_points = {
-				glm::vec3 {-30.0f, 0.0f, 0.0f},
-				glm::vec3 {+30.0f, 0.0f, 0.0f}
-			};
-			
-			m_stick_curve = std::make_shared<curve>(line_shader, curve_points);
+					
+			m_stick_curve = std::make_shared<segments_array>(line_shader, 2);
+			m_stick_curve->add_segment(0, 1);
+			m_stick_curve->set_line_width(3.0f);
 			m_stick_curve->set_color({0.0f, 0.0f, 0.0f, 1.0f});
 		}
 		
@@ -57,6 +75,11 @@ namespace mini {
 	
 	void flywheel_scene::integrate(float delta_time) {
 		m_state.integrate(delta_time);
+		
+		// update curves based on current state
+		m_stick_curve->update_point(0, glm::vec3(m_state.origin_pos, 0.0f));
+		m_stick_curve->update_point(1, glm::vec3(m_state.mass_pos, 0.0f));
+		m_stick_curve->rebuild_buffers();
 	}
 	
 	void flywheel_scene::render(app_context& context) {
@@ -81,6 +104,10 @@ namespace mini {
 			wheel_model = glm::scale(wheel_model, glm::vec3 { radius, radius, radius });
 			
 			auto mass_model = glm::mat4x4(1.0f);
+			glm::vec3 mt = glm::vec3(m_state.mass_pos, 0.0f);
+			mt.x += 0.875f;
+
+			mass_model = glm::translate(mass_model, mt);
 			mass_model = glm::scale(mass_model, glm::vec3{1.75f, 1.0f, 1.0f});
 			
 			context.draw(m_wheel_curve, wheel_model);
@@ -117,6 +144,9 @@ namespace mini {
 		
 		gui::prefix_label("Stick len.: ", 250.0f);
 		ImGui::DragFloat("##fwh_rod_len", &m_state.stick_length, 0.1f, 2.0f * R, 4.0f * R);
+
+		gui::prefix_label("Speed: ", 250.0f);
+		ImGui::DragFloat("##fwh_speed", &m_state.flywheel_speed, 0.1f, 0.1f, 10.0f);
 		
 		ImGui::End();
 		ImGui::PopStyleVar(1);
@@ -185,6 +215,7 @@ namespace mini {
 		
 		auto object = std::make_shared<curve>(line_shader, curve_points);
 		object->set_color({0.0f, 0.0f, 0.0f, 1.0f});
+		object->set_line_width(3.0f);
 		
 		return object;
 	}
@@ -212,6 +243,7 @@ namespace mini {
 		
 		auto object = std::make_shared<curve>(line_shader, curve_points);
 		object->set_color({0.0f, 0.0f, 0.0f, 1.0f});
+		object->set_line_width(3.0f);
 		
 		return object;
 	}

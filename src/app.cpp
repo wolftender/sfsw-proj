@@ -48,7 +48,7 @@ namespace mini {
 		m_store.load_texture("slime_normal", "textures/slime_normal.png");
 		m_store.load_texture("duck_albedo", "textures/duck.png");
 
-		m_scene = std::make_unique<puma_scene>(*this);
+		m_scene = std::make_unique<flywheel_scene>(*this);
 	}
 
 	scene_base& application::get_scene() {

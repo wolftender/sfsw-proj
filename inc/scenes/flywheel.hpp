@@ -2,6 +2,7 @@
 #include "scene.hpp"
 #include "curve.hpp"
 #include "grid.hpp"
+#include "segments.hpp"
 
 #include <array>
 #include <vector>
@@ -15,12 +16,19 @@ namespace mini {
 			struct simulation_state_t {
 				float wheel_radius;
 				float stick_length;
+				float flywheel_speed;
 				float time;
+				
+				glm::vec2 origin_pos;
+				glm::vec2 mass_pos;
 				
 				simulation_state_t() :
 					wheel_radius(5.0f),
 					stick_length(10.0f),
-					time(0.0f) { }
+					flywheel_speed(1.0f),
+					time(0.0f),
+					origin_pos{0.0f, 0.0f},
+					mass_pos{0.0f, 0.0f} { }
 					
 				void integrate(float delta_time);
 			};
@@ -35,7 +43,7 @@ namespace mini {
 			std::shared_ptr<grid_object> m_grid;
 			std::shared_ptr<curve> m_wheel_curve;
 			std::shared_ptr<curve> m_square_curve;
-			std::shared_ptr<curve> m_stick_curve;
+			std::shared_ptr<segments_array> m_stick_curve;
 	
 		public:
 			flywheel_scene(application_base & app);
