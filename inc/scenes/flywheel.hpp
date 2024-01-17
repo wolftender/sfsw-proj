@@ -13,11 +13,27 @@
 namespace mini {
 	class flywheel_scene : public scene_base {
 		private:
+			static constexpr std::size_t NUM_DATA_POINTS = 1000;
+
+			struct time_series_t {
+				std::vector<float> data;
+				std::vector<float> time;
+
+				const std::size_t num_samples;
+				std::size_t index;
+
+				time_series_t(std::size_t samples);
+
+				void store(float time, float data);
+				void clear();
+			};
+
 			struct simulation_state_t {
 				float wheel_radius;
 				float stick_length;
 				float flywheel_speed;
 				float time;
+				float time_total;
 				
 				glm::vec2 origin_pos;
 				glm::vec2 mass_pos;
@@ -27,6 +43,7 @@ namespace mini {
 					stick_length(10.0f),
 					flywheel_speed(1.0f),
 					time(0.0f),
+					time_total(0.0f),
 					origin_pos{0.0f, 0.0f},
 					mass_pos{0.0f, 0.0f} { }
 					
@@ -34,6 +51,10 @@ namespace mini {
 			};
 			
 			simulation_state_t m_state;
+
+			time_series_t m_pos_series;
+			time_series_t m_speed_series;
+			time_series_t m_accel_series;
 		
 			int m_last_vp_width, m_last_vp_height;
 			bool m_mouse_in_viewport, m_viewport_focus;
@@ -63,6 +84,10 @@ namespace mini {
 		private:
 			void m_gui_settings();
 			void m_gui_viewport();
+			void m_gui_graphs();
+
+			void m_plot_series(const time_series_t& series, const std::string& name, const ImVec2& size, 
+				const float min_range_x);
 			
 			std::shared_ptr<curve> m_make_square_curve(std::shared_ptr<shader_program> line_shader) const;
 			std::shared_ptr<curve> m_make_wheel_curve(std::shared_ptr<shader_program> line_shader) const;

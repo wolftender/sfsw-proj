@@ -1,9 +1,36 @@
 #include "gui.hpp"
+#include "camera.hpp"
 #include "scenes/flywheel.hpp"
 
 namespace mini {
+	flywheel_scene::time_series_t::time_series_t(std::size_t samples) : num_samples(samples), index(0UL) {
+		time.resize(num_samples);
+		data.resize(num_samples);
+	}
+
+	void flywheel_scene::time_series_t::store(float t, float x) {
+		if (index < num_samples) {
+			time[index] = t;
+			data[index] = x;
+			index++;
+		} else {
+			for (auto i = 0UL; i < num_samples - 1; ++i) {
+				time[i] = time[i + 1];
+				data[i] = data[i + 1];
+			}
+
+			time[num_samples - 1] = t;
+			data[num_samples - 1] = x;
+		}
+	}
+
+	void flywheel_scene::time_series_t::clear() {
+		index = 0UL;
+	}
+
 	void flywheel_scene::simulation_state_t::integrate(float delta_time) {
 		time = time + delta_time * flywheel_speed;
+		time_total = time_total + delta_time;
 
 		constexpr float pi = glm::pi<float>();
 		constexpr float dpi = 2.0f * pi;
@@ -29,6 +56,9 @@ namespace mini {
 
 	flywheel_scene::flywheel_scene(application_base & app) : 
 		scene_base(app),
+		m_pos_series(NUM_DATA_POINTS),
+		m_speed_series(NUM_DATA_POINTS),
+		m_accel_series(NUM_DATA_POINTS),
 		m_last_vp_width(0),
 		m_last_vp_height(0),
 		m_mouse_in_viewport(false),
@@ -68,18 +98,27 @@ namespace mini {
 	
 	void flywheel_scene::layout(ImGuiID dockspace_id) {
 		auto dock_id_right = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Right, 0.25f, nullptr, &dockspace_id);
+		auto dock_id_bottom_right = ImGui::DockBuilderSplitNode(dock_id_right, ImGuiDir_Down, 0.8f, nullptr, &dock_id_right);
 
 		ImGui::DockBuilderDockWindow("Flywheel", dockspace_id);
 		ImGui::DockBuilderDockWindow("Simulation Settings", dock_id_right);
+		ImGui::DockBuilderDockWindow("Simulation Data", dock_id_bottom_right);
 	}
 	
 	void flywheel_scene::integrate(float delta_time) {
+		if (delta_time > 0.1f) {
+			delta_time = 0.1f;
+		}
+
 		m_state.integrate(delta_time);
 		
 		// update curves based on current state
 		m_stick_curve->update_point(0, glm::vec3(m_state.origin_pos, 0.0f));
 		m_stick_curve->update_point(1, glm::vec3(m_state.mass_pos, 0.0f));
 		m_stick_curve->rebuild_buffers();
+
+		// store data from this frame
+		m_pos_series.store(m_state.time_total, m_state.mass_pos.x);
 	}
 	
 	void flywheel_scene::render(app_context& context) {
@@ -119,6 +158,7 @@ namespace mini {
 	void flywheel_scene::gui() {
 		m_gui_settings();
 		m_gui_viewport();
+		m_gui_graphs();
 	}
 	
 	void flywheel_scene::on_scroll(double offset_x, double offset_y) {
@@ -147,6 +187,15 @@ namespace mini {
 
 		gui::prefix_label("Speed: ", 250.0f);
 		ImGui::DragFloat("##fwh_speed", &m_state.flywheel_speed, 0.1f, 0.1f, 10.0f);
+
+		if (ImGui::Button("Reset")) {
+			m_pos_series.clear();
+			m_speed_series.clear();
+			m_accel_series.clear();
+
+			m_state.time = 0.0f;
+			m_state.time_total = 0.0f;
+		}
 		
 		ImGui::End();
 		ImGui::PopStyleVar(1);
@@ -200,6 +249,45 @@ namespace mini {
 
 		ImGui::End();
 		ImGui::PopStyleVar(1);
+	}
+
+	void flywheel_scene::m_gui_graphs() {
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(270, 450));
+		ImGui::Begin("Simulation Data", NULL);
+		ImGui::SetWindowPos(ImVec2(30, 30), ImGuiCond_Once);
+		ImGui::SetWindowSize(ImVec2(270, 450), ImGuiCond_Once);
+
+		auto min = ImGui::GetWindowContentRegionMin();
+		auto max = ImGui::GetWindowContentRegionMax();
+
+		auto width = max.x - min.x;
+		auto height = max.y - min.y;
+
+		constexpr float min_range_x = 20.0f;
+		auto size = ImVec2(-1.0f, 200.0f);
+
+		m_plot_series(m_pos_series, "x(t)", size, min_range_x);
+
+		ImGui::End();
+		ImGui::PopStyleVar(1);
+	}
+
+	void flywheel_scene::m_plot_series(const time_series_t& series, const std::string & name, const ImVec2& size, 
+		const float min_range_x) {
+
+		if (ImPlot::BeginPlot(name.c_str(), size, ImPlotFlags_NoBoxSelect | ImPlotFlags_NoInputs)) {
+			if (series.index > 0 && series.time[series.index - 1] - series.time[0] < min_range_x) {
+				ImPlot::SetupAxis(ImAxis_X1, "t");
+				ImPlot::SetupAxisLimits(ImAxis_X1, series.time[0], series.time[0] + min_range_x, ImPlotCond_Always);
+			} else {
+				ImPlot::SetupAxis(ImAxis_X1, "t", ImPlotAxisFlags_AutoFit);
+			}
+
+			ImPlot::SetupAxis(ImAxis_Y1, "##y", ImPlotAxisFlags_AutoFit);
+
+			ImPlot::PlotLine(name.c_str(), series.time.data(), series.data.data(), static_cast<int>(series.index));
+			ImPlot::EndPlot();
+		}
 	}
 	
 	std::shared_ptr<curve> flywheel_scene::m_make_square_curve(
