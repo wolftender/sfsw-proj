@@ -119,6 +119,21 @@ namespace mini {
 
 		// store data from this frame
 		m_pos_series.store(m_state.time_total, m_state.mass_pos.x);
+
+		const auto derivative = [](time_series_t& der, const time_series_t& series) {
+			if (series.index > 1) {
+				auto curr = series.index - 1;
+				auto prev = series.index - 2;
+
+				float dt = series.time[curr] - series.time[prev];
+				float dx = series.data[curr] - series.data[prev];
+
+				der.store(series.time[prev], dx / dt);
+			}
+		};
+
+		derivative(m_speed_series, m_pos_series);
+		derivative(m_accel_series, m_speed_series);
 	}
 	
 	void flywheel_scene::render(app_context& context) {
@@ -267,6 +282,8 @@ namespace mini {
 		auto size = ImVec2(-1.0f, 200.0f);
 
 		m_plot_series(m_pos_series, "x(t)", size, min_range_x);
+		m_plot_series(m_speed_series, "x'(t)", size, min_range_x);
+		m_plot_series(m_accel_series, "x''(t)", size, min_range_x);
 
 		ImGui::End();
 		ImGui::PopStyleVar(1);
