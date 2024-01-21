@@ -55,6 +55,7 @@ namespace mini {
 			time_series_t m_pos_series;
 			time_series_t m_speed_series;
 			time_series_t m_accel_series;
+			time_series_t m_hodograph;
 		
 			int m_last_vp_width, m_last_vp_height;
 			bool m_mouse_in_viewport, m_viewport_focus;
@@ -82,6 +83,7 @@ namespace mini {
 			virtual void on_scroll(double offset_x, double offset_y) override;
 
 		private:
+			void m_gui_curve_graph();
 			void m_gui_settings();
 			void m_gui_viewport();
 			void m_gui_graphs();

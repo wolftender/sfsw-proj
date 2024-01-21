@@ -2,8 +2,6 @@
 #include "camera.hpp"
 #include "scenes/flywheel.hpp"
 
-#include <iostream>
-
 namespace mini {
 	flywheel_scene::time_series_t::time_series_t(std::size_t samples) : num_samples(samples), index(0UL) {
 		time.resize(num_samples);
@@ -61,6 +59,7 @@ namespace mini {
 		m_pos_series(NUM_DATA_POINTS),
 		m_speed_series(NUM_DATA_POINTS),
 		m_accel_series(NUM_DATA_POINTS),
+		m_hodograph(NUM_DATA_POINTS),
 		m_last_vp_width(0),
 		m_last_vp_height(0),
 		m_mouse_in_viewport(false),
@@ -105,6 +104,7 @@ namespace mini {
 		ImGui::DockBuilderDockWindow("Flywheel", dockspace_id);
 		ImGui::DockBuilderDockWindow("Simulation Settings", dock_id_right);
 		ImGui::DockBuilderDockWindow("Simulation Data", dock_id_bottom_right);
+		ImGui::DockBuilderDockWindow("Trajectory", dock_id_bottom_right);
 	}
 	
 	void flywheel_scene::integrate(float delta_time) {
@@ -130,6 +130,7 @@ namespace mini {
 			float dx = m_pos_series.data[curr] - m_pos_series.data[prev];
 
 			m_speed_series.store(m_pos_series.time[prev], dx / dt);
+			m_hodograph.store(m_speed_series.data[m_speed_series.index - 1], m_pos_series.data[curr]);
 		}
 
 		if (m_pos_series.index > 2) {
@@ -192,6 +193,7 @@ namespace mini {
 		m_gui_settings();
 		m_gui_viewport();
 		m_gui_graphs();
+		m_gui_curve_graph();
 	}
 	
 	void flywheel_scene::on_scroll(double offset_x, double offset_y) {
@@ -204,6 +206,37 @@ namespace mini {
 		}
 	}
 	
+	void flywheel_scene::m_gui_curve_graph() {
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(270, 450));
+		ImGui::Begin("Trajectory", NULL);
+		ImGui::SetWindowPos(ImVec2(30, 30), ImGuiCond_Once);
+		ImGui::SetWindowSize(ImVec2(270, 450), ImGuiCond_Once);
+
+		auto min = ImGui::GetWindowContentRegionMin();
+		auto max = ImGui::GetWindowContentRegionMax();
+
+		auto width = max.x - min.x;
+		auto height = max.y - min.y;
+
+		//constexpr float min_range_x = 20.0f;
+		//constexpr float min_range_y = 20.0f;
+
+		// render plots
+		if (ImPlot::BeginPlot("x(v)", ImVec2(width, height), ImPlotFlags_NoBoxSelect)) {
+			ImPlot::SetupAxis(ImAxis_X1, "position", ImPlotAxisFlags_None);\
+			ImPlot::SetupAxis(ImAxis_Y1, "velocity", ImPlotAxisFlags_None);
+
+			ImPlot::SetupAxisLimits(ImAxis_X1, -10.0f, 10.0f, ImPlotCond_Once);
+			ImPlot::SetupAxisLimits(ImAxis_Y1, -10.0f, 10.0f, ImPlotCond_Once);
+
+			ImPlot::PlotLine("x(v)", m_hodograph.time.data(), m_hodograph.data.data(), m_hodograph.index);
+			ImPlot::EndPlot();
+		}
+
+		ImGui::End();
+		ImGui::PopStyleVar(1);
+	}
+
 	void flywheel_scene::m_gui_settings() {
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(270, 450));
 		ImGui::Begin("Simulation Settings", NULL);
@@ -225,6 +258,7 @@ namespace mini {
 			m_pos_series.clear();
 			m_speed_series.clear();
 			m_accel_series.clear();
+			m_hodograph.clear();
 
 			m_state.time = 0.0f;
 			m_state.time_total = 0.0f;
