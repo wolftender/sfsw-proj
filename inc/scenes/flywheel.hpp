@@ -6,6 +6,7 @@
 
 #include <array>
 #include <vector>
+#include <random>
 
 #include <glm/glm.hpp>
 #include <glm/gtx/quaternion.hpp>
@@ -34,6 +35,8 @@ namespace mini {
 				float flywheel_speed;
 				float time;
 				float time_total;
+				float eps;
+				bool error;
 				
 				glm::vec2 origin_pos;
 				glm::vec2 mass_pos;
@@ -45,7 +48,9 @@ namespace mini {
 					time(0.0f),
 					time_total(0.0f),
 					origin_pos{0.0f, 0.0f},
-					mass_pos{0.0f, 0.0f} { }
+					mass_pos{0.0f, 0.0f},
+					eps{0.005f * stick_length},
+					error(true) { }
 					
 				void integrate(float delta_time);
 			};
@@ -66,6 +71,10 @@ namespace mini {
 			std::shared_ptr<curve> m_wheel_curve;
 			std::shared_ptr<curve> m_square_curve;
 			std::shared_ptr<segments_array> m_stick_curve;
+
+			std::random_device m_rd;
+			std::mt19937 m_generator;
+			std::normal_distribution<float> m_distr;
 	
 		public:
 			flywheel_scene(application_base & app);

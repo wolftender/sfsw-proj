@@ -64,7 +64,10 @@ namespace mini {
 		m_last_vp_height(0),
 		m_mouse_in_viewport(false),
 		m_viewport_focus(false),
-		m_vp_mouse_offset{0, 0} {
+		m_vp_mouse_offset{0, 0},
+		m_rd{},
+		m_generator(m_rd()),
+		m_distr{0.0f, m_state.eps} {
 		
 		app.get_context().set_clear_color({ 0.95f, 0.95f, 0.95f });
 
@@ -120,7 +123,11 @@ namespace mini {
 		m_stick_curve->rebuild_buffers();
 
 		// store data from this frame
-		m_pos_series.store(m_state.time_total, m_state.mass_pos.x);
+		if (m_state.error) {
+			m_pos_series.store(m_state.time_total, m_state.mass_pos.x + m_distr(m_generator));
+		} else {
+			m_pos_series.store(m_state.time_total, m_state.mass_pos.x);
+		}
 
 		if (m_pos_series.index > 1) {
 			auto curr = m_pos_series.index - 1;
@@ -253,6 +260,16 @@ namespace mini {
 
 		gui::prefix_label("Speed: ", 250.0f);
 		ImGui::DragFloat("##fwh_speed", &m_state.flywheel_speed, 0.1f, 0.1f, 10.0f);
+
+		gui::prefix_label("Epsilon: ", 250.0f);
+
+		auto L = m_state.stick_length;
+		if (ImGui::DragFloat("##fwh_epsilon", &m_state.eps, 0.00001f * L, 0.00001f * L, 0.01f * L)) {
+			m_distr = std::normal_distribution{ 0.0f, m_state.eps };
+		}
+
+		gui::prefix_label("Error: ", 250.0f);
+		ImGui::Checkbox("##fwh_error", &m_state.error);
 
 		if (ImGui::Button("Reset")) {
 			m_pos_series.clear();
