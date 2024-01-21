@@ -2,6 +2,8 @@
 #include "camera.hpp"
 #include "scenes/flywheel.hpp"
 
+#include <iostream>
+
 namespace mini {
 	flywheel_scene::time_series_t::time_series_t(std::size_t samples) : num_samples(samples), index(0UL) {
 		time.resize(num_samples);
@@ -120,20 +122,36 @@ namespace mini {
 		// store data from this frame
 		m_pos_series.store(m_state.time_total, m_state.mass_pos.x);
 
-		const auto derivative = [](time_series_t& der, const time_series_t& series) {
-			if (series.index > 1) {
-				auto curr = series.index - 1;
-				auto prev = series.index - 2;
+		if (m_pos_series.index > 1) {
+			auto curr = m_pos_series.index - 1;
+			auto prev = m_pos_series.index - 2;
 
-				float dt = series.time[curr] - series.time[prev];
-				float dx = series.data[curr] - series.data[prev];
+			float dt = m_pos_series.time[curr] - m_pos_series.time[prev];
+			float dx = m_pos_series.data[curr] - m_pos_series.data[prev];
 
-				der.store(series.time[prev], dx / dt);
-			}
-		};
+			m_speed_series.store(m_pos_series.time[prev], dx / dt);
+		}
 
-		derivative(m_speed_series, m_pos_series);
-		derivative(m_accel_series, m_speed_series);
+		if (m_pos_series.index > 2) {
+			auto next = m_pos_series.index - 1;
+			auto curr = m_pos_series.index - 2;
+			auto prev = m_pos_series.index - 3;
+
+			float t1 = m_pos_series.time[prev];
+			float t2 = m_pos_series.time[curr];
+			float t3 = m_pos_series.time[next];
+
+			float y1 = m_pos_series.data[prev];
+			float y2 = m_pos_series.data[curr];
+			float y3 = m_pos_series.data[next];
+
+			float d = 0.0f;
+			d += 2.0f * y1 / ((t2 - t1) * (t3 - t1));
+			d -= 2.0f * y2 / ((t3 - t2) * (t2 - t1));
+			d += 2.0f * y3 / ((t3 - t2) * (t3 - t1));
+
+			m_accel_series.store(t2, d);
+		}
 	}
 	
 	void flywheel_scene::render(app_context& context) {
