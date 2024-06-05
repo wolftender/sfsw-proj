@@ -3,6 +3,16 @@
 
 namespace mini {
 	black_hole_scene::black_hole_scene(application_base& app) : scene_base(app) {
+		const std::array<std::string, 6> cubemap_files = {
+			"textures/cubemap/px.png",
+			"textures/cubemap/nx.png",
+			"textures/cubemap/py.png",
+			"textures/cubemap/ny.png",
+			"textures/cubemap/pz.png",
+			"textures/cubemap/nz.png"
+		};
+
+		m_cubemap = cubemap::load_from_files(cubemap_files);
 	}
 
 	black_hole_scene::~black_hole_scene() {

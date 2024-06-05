@@ -361,7 +361,7 @@ namespace mini {
 	void flywheel_scene::m_plot_series(const time_series_t& series, const std::string & name, const ImVec2& size, 
 		const float min_range_x) {
 
-		if (ImPlot::BeginPlot(name.c_str(), size, ImPlotFlags_NoBoxSelect | ImPlotFlags_NoInputs)) {
+		if (ImPlot::BeginPlot(name.c_str(), size, ImPlotFlags_None)) {
 			if (series.index > 0 && series.time[series.index - 1] - series.time[0] < min_range_x) {
 				ImPlot::SetupAxis(ImAxis_X1, "t");
 				ImPlot::SetupAxisLimits(ImAxis_X1, series.time[0], series.time[0] + min_range_x, ImPlotCond_Always);

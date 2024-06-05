@@ -43,6 +43,7 @@ namespace mini {
 		m_store.load_shader("obstacle", "shaders/vs_basic_tex.glsl", "shaders/fs_solidcolor.glsl");
 		m_store.load_shader("bezier_model", "shaders/vs_beziermodel.glsl", "shaders/fs_beziermodel.glsl");
 		m_store.load_shader("puma", "shaders/vs_shaded.glsl", "shaders/fs_shaded.glsl");
+		m_store.load_shader("blackhole", "shaders/vs_blackhole.glsl", "shaders/fs_blackhole.glsl");
 
 		// load textures
 		m_store.load_texture("slime_albedo", "textures/slime_albedo.png");

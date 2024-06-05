@@ -1,8 +1,12 @@
 #pragma once
 #include "scene.hpp"
+#include "cubemap.hpp"
 
 namespace mini {
 	class black_hole_scene : public scene_base {
+		private:
+			std::shared_ptr<cubemap> m_cubemap;
+
 		public:
 			black_hole_scene(application_base& app);
 			~black_hole_scene();
