@@ -13,6 +13,7 @@
 #include "scenes/ik.hpp"
 #include "scenes/puma.hpp"
 #include "scenes/flywheel.hpp"
+#include "scenes/blackhole.hpp"
 	
 namespace mini {
 	// ignore pedantic warnings
@@ -48,7 +49,7 @@ namespace mini {
 		m_store.load_texture("slime_normal", "textures/slime_normal.png");
 		m_store.load_texture("duck_albedo", "textures/duck.png");
 
-		m_scene = std::make_unique<flywheel_scene>(*this);
+		m_scene = std::make_unique<black_hole_scene>(*this);
 	}
 
 	scene_base& application::get_scene() {
@@ -148,6 +149,10 @@ namespace mini {
 					m_load_scene_flywheel();
 					return;
 
+				case GLFW_KEY_F8:
+					m_load_scene_blackhole();
+					return;
+
 				default: 
 					break;
 			}
@@ -211,6 +216,10 @@ namespace mini {
 				
 				if (ImGui::MenuItem("Flywheel Demo", "Ctrl + Shift + F7", nullptr, true)) {
 					m_load_scene_flywheel();
+				}
+
+				if (ImGui::MenuItem("Black Hole Demo", "Ctrl + Shift + F8", nullptr, true)) {
+					m_load_scene_blackhole();
 				}
 
 				ImGui::EndMenu();
@@ -300,6 +309,11 @@ namespace mini {
 	
 	void application::m_load_scene_flywheel() {
 		m_scene = std::make_unique<flywheel_scene>(*this);
+		m_layout_ready = false;
+	}
+
+	void application::m_load_scene_blackhole() {
+		m_scene = std::make_unique<black_hole_scene>(*this);
 		m_layout_ready = false;
 	}
 }

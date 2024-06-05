@@ -105,6 +105,9 @@
     <ClCompile Include="src\scenes\flywheel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\scenes\blackhole.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="inc\app.hpp">
@@ -198,6 +201,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="inc\scenes\flywheel.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\scenes\blackhole.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

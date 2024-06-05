@@ -160,6 +160,7 @@
     <ClCompile Include="src\model.cpp" />
     <ClCompile Include="src\plane.cpp" />
     <ClCompile Include="src\scamera.cpp" />
+    <ClCompile Include="src\scenes\blackhole.cpp" />
     <ClCompile Include="src\scenes\flywheel.cpp" />
     <ClCompile Include="src\scenes\gel.cpp" />
     <ClCompile Include="src\scenes\ik.cpp" />
@@ -193,6 +194,7 @@
     <ClInclude Include="inc\plane.hpp" />
     <ClInclude Include="inc\scamera.hpp" />
     <ClInclude Include="inc\scene.hpp" />
+    <ClInclude Include="inc\scenes\blackhole.hpp" />
     <ClInclude Include="inc\scenes\flywheel.hpp" />
     <ClInclude Include="inc\scenes\gel.hpp" />
     <ClInclude Include="inc\scenes\ik.hpp" />
