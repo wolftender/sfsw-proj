@@ -6,11 +6,13 @@
 namespace mini {
 	class black_hole_scene : public scene_base {
 		private:
-			std::shared_ptr<cubemap> m_cubemap;
+			std::vector<std::pair<std::string, std::shared_ptr<cubemap>>> m_cubemaps;
 			std::shared_ptr<black_hole_quad> m_screenquad;
 
-			int m_last_vp_width, m_last_vp_height;
-			float m_time;
+			int m_last_vp_width, m_last_vp_height, m_selected_map;
+			float m_cam_pitch, m_cam_yaw;
+
+			bool m_viewport_focus;
 
 		public:
 			black_hole_scene(application_base& app);

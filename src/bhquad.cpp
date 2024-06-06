@@ -17,7 +17,9 @@ namespace mini {
 		std::shared_ptr<shader_program> program, 
 		std::shared_ptr<cubemap> cubemap) : 
 		m_program(program), 
-		m_cubemap(cubemap) {
+		m_cubemap(cubemap),
+		m_distance(1000.0f),
+		m_star_mass(10.0f) {
 
 		glGenVertexArrays(1, &m_vao);
 		glBindVertexArray(m_vao);
@@ -40,7 +42,27 @@ namespace mini {
 		}
 	}
 
-	void black_hole_quad::render(app_context& context, const glm::mat4x4& world_matrix) const {
+    float black_hole_quad::get_star_mass() const {
+        return m_star_mass;
+    }
+
+    float black_hole_quad::get_distance() const {
+        return m_distance;
+    }
+
+    void black_hole_quad::set_star_mass(float star_mass) {
+		m_star_mass = star_mass;
+    }
+
+    void black_hole_quad::set_distance(float distance) {
+		m_distance = distance;
+    }
+
+    void black_hole_quad::set_cube_map(std::shared_ptr<cubemap> cubemap) {
+		m_cubemap = cubemap;
+    }
+
+    void black_hole_quad::render(app_context& context, const glm::mat4x4& world_matrix) const {
 		glBindVertexArray(m_vao);
 
 		m_program->bind();
@@ -49,9 +71,19 @@ namespace mini {
 		const auto& view_matrix = context.get_view_matrix();
 		const auto& proj_matrix = context.get_projection_matrix();
 
+		const auto& video_mode = context.get_video_mode();
+
+		glm::vec2 resolution = {
+			static_cast<float>(video_mode.get_buffer_width()),
+			static_cast<float>(video_mode.get_buffer_height())
+		};
+
 		m_program->set_uniform("u_world", world_matrix);
 		m_program->set_uniform("u_view", view_matrix);
 		m_program->set_uniform("u_projection", proj_matrix);
+		m_program->set_uniform("u_resolution", resolution);
+		m_program->set_uniform("u_distance", m_distance);
+		m_program->set_uniform("u_star_mass", m_star_mass);
 
 		m_cubemap->bind();
 
