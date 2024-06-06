@@ -149,6 +149,7 @@
     <ClCompile Include="src\camera.cpp" />
     <ClCompile Include="src\context.cpp" />
     <ClCompile Include="src\cube.cpp" />
+    <ClCompile Include="src\cubemap.cpp" />
     <ClCompile Include="src\curve.cpp" />
     <ClCompile Include="src\gizmo.cpp" />
     <ClCompile Include="src\grid.cpp" />
@@ -168,6 +169,7 @@
     <ClCompile Include="src\scenes\slerp.cpp" />
     <ClCompile Include="src\scenes\spring.cpp" />
     <ClCompile Include="src\scenes\top.cpp" />
+    <ClCompile Include="src\bhquad.cpp" />
     <ClCompile Include="src\segments.cpp" />
     <ClCompile Include="src\shader.cpp" />
     <ClCompile Include="src\store.cpp" />
@@ -182,6 +184,7 @@
     <ClInclude Include="inc\camera.hpp" />
     <ClInclude Include="inc\context.hpp" />
     <ClInclude Include="inc\cube.hpp" />
+    <ClInclude Include="inc\cubemap.hpp" />
     <ClInclude Include="inc\curve.hpp" />
     <ClInclude Include="inc\function.hpp" />
     <ClInclude Include="inc\gizmo.hpp" />
@@ -202,6 +205,7 @@
     <ClInclude Include="inc\scenes\slerp.hpp" />
     <ClInclude Include="inc\scenes\spring.hpp" />
     <ClInclude Include="inc\scenes\top.hpp" />
+    <ClInclude Include="inc\bhquad.hpp" />
     <ClInclude Include="inc\shader.hpp" />
     <ClInclude Include="inc\store.hpp" />
     <ClInclude Include="inc\texture.hpp" />
@@ -213,6 +217,7 @@
     <None Include="shaders\fs_basic.glsl" />
     <None Include="shaders\fs_beziermodel.glsl" />
     <None Include="shaders\fs_billboard.glsl" />
+    <None Include="shaders\fs_blackhole.glsl" />
     <None Include="shaders\fs_gelcube.glsl" />
     <None Include="shaders\fs_grid_xy.glsl" />
     <None Include="shaders\fs_grid_xz.glsl" />
@@ -229,6 +234,7 @@
     <None Include="shaders\vs_beziermodel.glsl" />
     <None Include="shaders\vs_billboard.glsl" />
     <None Include="shaders\vs_billboard_s.glsl" />
+    <None Include="shaders\vs_blackhole.glsl" />
     <None Include="shaders\vs_grid.glsl" />
     <None Include="shaders\vs_pass.glsl" />
     <None Include="shaders\vs_gelcube.glsl" />

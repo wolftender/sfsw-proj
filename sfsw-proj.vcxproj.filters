@@ -108,6 +108,12 @@
     <ClCompile Include="src\scenes\blackhole.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\cubemap.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\bhquad.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="inc\app.hpp">
@@ -206,6 +212,12 @@
     <ClInclude Include="inc\scenes\blackhole.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="inc\cubemap.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\bhquad.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\fs_basic.glsl" />
@@ -233,6 +245,8 @@
     <None Include="shaders\fs_shaded_room.glsl" />
     <None Include="shaders\fs_beziermodel.glsl" />
     <None Include="shaders\vs_beziermodel.glsl" />
+    <None Include="shaders\fs_blackhole.glsl" />
+    <None Include="shaders\vs_blackhole.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Font Include="opensans.ttf" />

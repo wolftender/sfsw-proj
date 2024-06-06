@@ -17,7 +17,7 @@ namespace mini {
         for (auto i = 0UL; i < info.sides.size(); ++i) {
             const auto& side = info.sides[i];
             glTexImage2D(
-                GL_TEXTURE_CUBE_MAP_NEGATIVE_X + i, 
+                GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
                 0, side.format, side.width, side.height, 
                 0, side.format, GL_UNSIGNED_BYTE, side.data);
         }
@@ -26,7 +26,7 @@ namespace mini {
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE); 
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
         glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
         m_handle = handle;
@@ -45,8 +45,7 @@ namespace mini {
         }
     }
 
-    std::shared_ptr<cubemap> cubemap::load_from_files(const std::array<std::string, 6> &sides)
-    {
+    std::shared_ptr<cubemap> cubemap::load_from_files(const std::array<std::string, 6> &sides) {
         std::array<side_image_source, 6> side_images;
         cubemap_info info;
 
