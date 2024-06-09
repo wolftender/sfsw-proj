@@ -147,7 +147,7 @@ namespace mini {
 		auto star_mass = m_screenquad->get_star_mass();
 
 		gui::prefix_label("Distance: ", 250.0f);
-		ImGui::DragFloat("##bh_dist", &distance, 0.1f, 10.0f, 1000.0f);
+		ImGui::DragFloat("##bh_dist", &distance, 10.0f, 10.0f, 1000.0f);
 
 		gui::prefix_label("Star mass: ", 250.0f);
 		ImGui::DragFloat("##bh_mass", &star_mass, 0.1f, 0.1f, 1000.0f);

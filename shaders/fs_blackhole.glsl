@@ -84,9 +84,6 @@ float find_angle(float b, float M) {
 // assume that the black hole M = u_star_mass
 
 void main() {
-    // we assume that world is a rotation
-    // so the inverse is simply a transposition
-    mat4 world_inv = transpose(u_world);
     float aspect = u_resolution.x / u_resolution.y;
 
     vec3 cam_position = vec3(0.0, 0.0, -1.8);
